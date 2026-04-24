@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionProfile, summarizeProfile } from "@/lib/session";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -7,6 +8,12 @@ export async function POST(req: NextRequest) {
   try {
     const { prompt, preferences, count, exclude } = await req.json();
     const numSuggestions = count || 4;
+
+    // Enrich with user profile if signed in
+    const sessionProfile = await getSessionProfile();
+    const profileNote = sessionProfile
+      ? `\n\nUser profile: ${summarizeProfile(sessionProfile)}. Weight suggestions toward these interests when relevant, but still vary the ideas.`
+      : "";
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
@@ -16,7 +23,7 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = `You are iEventer, a fun and enthusiastic activity recommender.
 Given a user's input about what they want to do, their mood, who they're with, and their preferences,
-suggest exactly ${numSuggestions} creative and detailed activity ideas.${excludeNote}
+suggest exactly ${numSuggestions} creative and detailed activity ideas.${excludeNote}${profileNote}
 
 For EACH suggestion, respond in this exact JSON format:
 {

@@ -23,7 +23,13 @@ export async function UserNav() {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
+      <Link
+        href="/plans"
+        className="text-white/90 hover:text-white text-sm font-semibold transition-colors"
+      >
+        📋 My Plans
+      </Link>
       <Link
         href="/onboarding"
         className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-sm font-semibold px-3 py-1.5 rounded-full transition-colors"

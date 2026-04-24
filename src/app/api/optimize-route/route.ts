@@ -1,11 +1,17 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionProfile, summarizeProfile } from "@/lib/session";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: NextRequest) {
   try {
     const { events, location, preferences } = await req.json();
+    const sessionProfile = await getSessionProfile();
+    const effectiveLocation = location || sessionProfile?.profile?.location || "";
+    const profileNote = sessionProfile
+      ? `User profile: ${summarizeProfile(sessionProfile)}`
+      : "";
 
     if (!events || events.length === 0) {
       return NextResponse.json(
@@ -60,8 +66,9 @@ If some events are on different days, group them by day.`;
 
 ${eventList}
 
-${location ? `I'm starting from: ${location}` : ""}
+${effectiveLocation ? `I'm starting from: ${effectiveLocation}` : ""}
 ${preferences ? `My preferences: ${preferences}` : ""}
+${profileNote}
 
 Please optimize the best route/order for me to attend these.`;
 
