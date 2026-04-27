@@ -8,6 +8,7 @@ import {
   jsonb,
   pgEnum,
   uuid,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 
@@ -184,16 +185,23 @@ export const journalEntries = pgTable("journal_entry", {
 });
 
 // Daily surprise picks — one per user per day
-export const dailyPicks = pgTable("daily_pick", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: text("userId")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  pickDate: text("pickDate").notNull(), // YYYY-MM-DD
-  sourceProvider: text("sourceProvider").notNull(),
-  sourceId: text("sourceId").notNull(),
-  eventSnapshot: jsonb("eventSnapshot").notNull(), // full event data
-  reason: text("reason").notNull(), // why AI picked it
-  seenAt: timestamp("seenAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+export const dailyPicks = pgTable(
+  "daily_pick",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    pickDate: text("pickDate").notNull(), // YYYY-MM-DD
+    sourceProvider: text("sourceProvider").notNull(),
+    sourceId: text("sourceId").notNull(),
+    eventSnapshot: jsonb("eventSnapshot").notNull(), // full event data
+    reason: text("reason").notNull(), // why AI picked it
+    seenAt: timestamp("seenAt"),
+    dismissedAt: timestamp("dismissedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("daily_pick_user_date_uniq").on(t.userId, t.pickDate),
+  ]
+);

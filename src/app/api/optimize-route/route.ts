@@ -37,7 +37,7 @@ Respond in this exact JSON format:
       "order": 1,
       "eventName": "Name of event",
       "eventUrl": "URL to event page",
-      "time": "suggested time or actual event time",
+      "time": "Human-readable time like 'Sat Jun 13, 7:00 PM' or 'Saturday evening' — NEVER raw ISO timestamps",
       "travelTip": "how to get there from the previous stop",
       "reason": "why this is placed here in the order"
     }
@@ -49,12 +49,27 @@ Respond in this exact JSON format:
 }
 
 Be practical and specific with travel tips. If events have set times, respect those.
-If some events are on different days, group them by day.`;
+If some events are on different days, group them by day.
+ALWAYS write the "time" field in a friendly human-readable format. Never echo back ISO 8601 timestamps.`;
+
+    // Format dates into human-readable strings before sending to Gemini.
+    const formatDate = (iso: unknown): string => {
+      if (typeof iso !== "string" || !iso) return "flexible time";
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      return d.toLocaleString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    };
 
     const eventList = events
       .map(
         (e: Record<string, string | boolean | null | Record<string, string>>, i: number) =>
-          `${i + 1}. "${e.name}" - ${e.start || "flexible time"} - ${
+          `${i + 1}. "${e.name}" - ${formatDate(e.start)} - ${
             e.venue
               ? `at ${(e.venue as Record<string, string>).name || ""}, ${(e.venue as Record<string, string>).address || ""}`
               : "location TBD"

@@ -6,6 +6,7 @@ import {
   removeEventFromPlan,
   saveOptimizedRoute,
 } from "@/lib/plans";
+import { DailyPickCard } from "@/components/DailyPickCard";
 
 // ─── Option Data ──────────────────────────────────────────────
 const MOODS = ["😊 Happy", "😴 Bored", "😰 Stressed", "🥳 Adventurous", "😌 Chill", "🤔 Curious"];
@@ -87,6 +88,21 @@ interface RoutePlan {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
+// Render an ISO/parseable date as a friendly local string.
+// Falls back to the raw string if it isn't parseable (so AI-generated
+// human-readable times like "7:00 PM, Sat Jun 13" pass through unchanged).
+function formatEventDate(input: string): string {
+  const d = new Date(input);
+  if (isNaN(d.getTime())) return input;
+  return d.toLocaleString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 function filterByWhen(events: EventItem[], when: WhenFilter): EventItem[] {
   if (when === "all") return events;
 
@@ -259,15 +275,7 @@ function EventCard({
   onAddToPlan: (e: EventItem) => void;
   isInPlan: boolean;
 }) {
-  const date = e.start
-    ? new Date(e.start).toLocaleDateString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })
-    : "";
+  const date = e.start ? formatEventDate(e.start) : "";
 
   return (
     <div className="animate-fade-in bg-white rounded-xl shadow-sm border border-foreground/5 overflow-hidden hover:shadow-md transition-shadow flex flex-col">
@@ -355,14 +363,7 @@ function PlanPanel({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{e.name}</p>
                 <p className="text-xs text-muted">
-                  {e.start
-                    ? new Date(e.start).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })
-                    : "Flexible time"}
+                  {e.start ? formatEventDate(e.start) : "Flexible time"}
                   {e.venue ? ` · ${e.venue.name}` : ""}
                 </p>
               </div>
@@ -435,7 +436,7 @@ function PlanPanel({
                     <div>
                       <p className="font-semibold text-sm">{stop.eventName}</p>
                       <p className="text-xs text-accent font-medium mt-0.5">
-                        🕐 {stop.time}
+                        🕐 {formatEventDate(stop.time)}
                       </p>
                     </div>
                     {stop.eventUrl && stop.eventUrl !== "N/A" && (
@@ -496,12 +497,24 @@ function PlanPanel({
 }
 
 // ─── Main Page ───────────────────────────────────────────────
+type DailyPickEvent = EventItem;
+
+interface SerializedDailyPick {
+  id: string;
+  pickDate: string;
+  reason: string;
+  event: DailyPickEvent;
+  seenAt: string | null;
+  dismissedAt: string | null;
+}
+
 export interface HomeClientProps {
   isSignedIn: boolean;
   planId: string | null;
   initialLocation: string;
   initialPlan: EventItem[];
   initialRoutePlan: RoutePlan | null;
+  dailyPick: SerializedDailyPick | null;
 }
 
 export default function HomeClient({
@@ -510,6 +523,7 @@ export default function HomeClient({
   initialLocation,
   initialPlan,
   initialRoutePlan,
+  dailyPick,
 }: HomeClientProps) {
   // Input mode
   const [mode, setMode] = useState<"type" | "pick">("type");
@@ -788,6 +802,11 @@ export default function HomeClient({
       </header>
 
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-8">
+        {/* Daily surprise pick (signed-in + onboarded users only) */}
+        {dailyPick && (
+          <DailyPickCard initialPick={dailyPick} planId={planId} />
+        )}
+
         {/* Mode toggle */}
         <div className="flex justify-center gap-2 mb-6">
           {(["type", "pick"] as const).map((m) => (

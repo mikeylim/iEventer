@@ -1,4 +1,5 @@
 import { auth, signIn, signOut } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 import Link from "next/link";
 
 export async function UserNav() {
@@ -49,7 +50,11 @@ export async function UserNav() {
       <form
         action={async () => {
           "use server";
-          await signOut({ redirectTo: "/" });
+          await signOut({ redirect: false });
+          revalidatePath("/", "layout");
+          // Hard redirect so client state (plan, etc.) is fully reset
+          const { redirect } = await import("next/navigation");
+          redirect("/");
         }}
       >
         <button
