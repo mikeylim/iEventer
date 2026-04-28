@@ -37,6 +37,9 @@ yarn-error.log*
 # claude code local settings (may contain tokens in permission rules)
 .claude/
 
+# design references (not part of the build)
+design-ref/
+
 # vercel
 .vercel
 
