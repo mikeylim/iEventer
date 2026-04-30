@@ -139,6 +139,7 @@ export const plans = pgTable("plan", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
+  description: text("description"), // optional free-text description shown on plan detail
   shareSlug: text("shareSlug").unique(), // null until user shares
   isPublic: boolean("isPublic").default(false).notNull(),
   optimizedRoute: jsonb("optimizedRoute"), // cached Gemini output

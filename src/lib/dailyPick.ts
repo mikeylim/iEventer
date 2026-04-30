@@ -138,7 +138,7 @@ export async function generateDailyPick(
     eligibleCandidates.length > 0 ? eligibleCandidates : candidates;
 
   // 5. Ask Gemini to pick the best one and explain why
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
   const candidateList = finalCandidates
     .slice(0, 8)

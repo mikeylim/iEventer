@@ -22,3 +22,25 @@ export async function touchPlan(planId: string) {
   revalidatePath("/");
   revalidatePath("/plans");
 }
+
+/**
+ * Updates the optional free-text description shown on plan detail.
+ */
+export async function updatePlanDescription(
+  planId: string,
+  description: string
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Not signed in");
+
+  await db
+    .update(plans)
+    .set({
+      description: description.trim() || null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(plans.id, planId), eq(plans.userId, session.user.id)));
+
+  revalidatePath(`/plans/${planId}`);
+  revalidatePath("/plans");
+}

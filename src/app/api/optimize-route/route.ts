@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     const systemPrompt = `You are a smart trip/day planner. The user has selected multiple events and activities they want to do.
 Your job is to figure out the best ORDER to attend them, considering:
@@ -107,8 +107,25 @@ Please optimize the best route/order for me to attend these.`;
   } catch (error) {
     console.error("Route optimizer error:", error);
     return NextResponse.json(
-      { error: "Failed to optimize route. Check your Gemini API key." },
+      { error: friendlyGeminiError(error) },
       { status: 500 }
     );
   }
+}
+
+function friendlyGeminiError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (/RESOURCE_EXHAUSTED|429|quota/i.test(msg)) {
+    return "AI is busy right now (rate limit). Try again in a moment.";
+  }
+  if (/UNAUTHENTICATED|401|API key/i.test(msg)) {
+    return "Gemini API key is invalid or missing.";
+  }
+  if (/PERMISSION_DENIED|403/i.test(msg)) {
+    return "Gemini API key doesn't have access to this model.";
+  }
+  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|UND_ERR_SOCKET/i.test(msg)) {
+    return "Couldn't reach Gemini. Check your internet connection.";
+  }
+  return "Failed to optimize route. Try again.";
 }

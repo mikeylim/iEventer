@@ -2,6 +2,8 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Edit } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { touchPlan } from "./actions";
 
 export function MakeCurrentButton({ planId }: { planId: string }) {
@@ -16,13 +18,9 @@ export function MakeCurrentButton({ planId }: { planId: string }) {
   }
 
   return (
-    <button
-      onClick={handleClick}
-      disabled={isPending}
-      className={`bg-primary hover:bg-primary-light text-white font-semibold text-sm px-5 py-2 rounded-full transition-colors cursor-pointer
-        ${isPending ? "opacity-70 cursor-not-allowed" : ""}`}
-    >
-      {isPending ? "Loading..." : "Edit this plan →"}
-    </button>
+    <Button onClick={handleClick} disabled={isPending} size="lg">
+      <Edit className="w-4 h-4" />
+      {isPending ? "Loading..." : "Edit this plan"}
+    </Button>
   );
 }

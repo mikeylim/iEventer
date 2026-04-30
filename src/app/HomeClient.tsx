@@ -1,12 +1,31 @@
 "use client";
 
 import { useState, useCallback, useRef, useTransition } from "react";
+import { Sparkles, MapPin, X, Map as MapIcon, Loader2, Filter } from "lucide-react";
 import {
   addEventToPlan,
   removeEventFromPlan,
   saveOptimizedRoute,
 } from "@/lib/plans";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DailyPickCard } from "@/components/DailyPickCard";
+import {
+  EventCard,
+  type EventItem,
+} from "@/components/EventCard";
+import {
+  AISuggestionCard,
+  type Suggestion,
+} from "@/components/AISuggestionCard";
+import {
+  RouteTimelineNode,
+  type RouteStop,
+} from "@/components/RouteTimelineNode";
+import { cn } from "@/lib/utils";
 
 // ─── Option Data ──────────────────────────────────────────────
 const MOODS = ["😊 Happy", "😴 Bored", "😰 Stressed", "🥳 Adventurous", "😌 Chill", "🤔 Curious"];
@@ -27,58 +46,20 @@ const WHEN_FILTERS = [
   { value: "all", label: "Any Time" },
   { value: "today", label: "Today" },
   { value: "tomorrow", label: "Tomorrow" },
-  { value: "this_weekend", label: "This Weekend" },
+  { value: "this_weekend", label: "Weekend" },
   { value: "this_week", label: "This Week" },
 ] as const;
 
 const PRICE_FILTERS = [
   { value: "all", label: "Any Price" },
-  { value: "free", label: "🆓 Free" },
-  { value: "paid", label: "💰 Paid" },
+  { value: "free", label: "Free" },
+  { value: "paid", label: "Paid" },
 ] as const;
 
 type WhenFilter = (typeof WHEN_FILTERS)[number]["value"];
 type PriceFilter = (typeof PRICE_FILTERS)[number]["value"];
 
 // ─── Types ────────────────────────────────────────────────────
-interface Suggestion {
-  title: string;
-  emoji: string;
-  description: string;
-  steps: string[];
-  details: {
-    difficulty: string;
-    cost: string;
-    duration: string;
-    bestFor: string;
-    location: string;
-  };
-  searchKeyword: string;
-}
-
-interface EventItem {
-  id: string;
-  name: string;
-  description: string;
-  url: string;
-  start: string;
-  category: string;
-  venue: { name: string; city: string; address: string } | null;
-  isFree: boolean;
-  logo: string | null;
-  // Populated for signed-in users after the event is persisted to the DB
-  planEventId?: string;
-}
-
-interface RouteStop {
-  order: number;
-  eventName: string;
-  eventUrl: string;
-  time: string;
-  travelTip: string;
-  reason: string;
-}
-
 interface RoutePlan {
   route: RouteStop[];
   summary: string;
@@ -87,34 +68,35 @@ interface RoutePlan {
   estimatedTotalCost: string;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────
-// Render an ISO/parseable date as a friendly local string.
-// Falls back to the raw string if it isn't parseable (so AI-generated
-// human-readable times like "7:00 PM, Sat Jun 13" pass through unchanged).
-function formatEventDate(input: string): string {
-  const d = new Date(input);
-  if (isNaN(d.getTime())) return input;
-  return d.toLocaleString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+type DailyPickEvent = EventItem;
+
+interface SerializedDailyPick {
+  id: string;
+  pickDate: string;
+  reason: string;
+  event: DailyPickEvent;
+  seenAt: string | null;
+  dismissedAt: string | null;
 }
 
+export interface HomeClientProps {
+  isSignedIn: boolean;
+  planId: string | null;
+  initialLocation: string;
+  initialPlan: EventItem[];
+  initialRoutePlan: RoutePlan | null;
+  dailyPick: SerializedDailyPick | null;
+}
+
+// ─── Filter helpers ──────────────────────────────────────────
 function filterByWhen(events: EventItem[], when: WhenFilter): EventItem[] {
   if (when === "all") return events;
-
   const now = new Date();
-  const todayStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
-
+  const todayStr = now.toISOString().split("T")[0];
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = tomorrow.toISOString().split("T")[0];
-
-  // Find next Saturday & Sunday
-  const dayOfWeek = now.getDay(); // 0=Sun, 6=Sat
+  const dayOfWeek = now.getDay();
   const daysToSat = (6 - dayOfWeek + 7) % 7 || 7;
   const saturday = new Date(now);
   saturday.setDate(now.getDate() + (dayOfWeek === 6 ? 0 : daysToSat));
@@ -122,8 +104,6 @@ function filterByWhen(events: EventItem[], when: WhenFilter): EventItem[] {
   const sunday = new Date(saturday);
   sunday.setDate(saturday.getDate() + 1);
   const sunStr = sunday.toISOString().split("T")[0];
-
-  // End of this week (Sunday)
   const endOfWeek = new Date(now);
   endOfWeek.setDate(now.getDate() + (7 - dayOfWeek));
   const endOfWeekStr = endOfWeek.toISOString().split("T")[0];
@@ -157,7 +137,7 @@ function filterByCategory(events: EventItem[], category: string): EventItem[] {
   return events.filter((e) => e.category === category);
 }
 
-// ─── Pill Selector Component ─────────────────────────────────
+// ─── Pill Selector ───────────────────────────────────────────
 function PillSelect({
   label,
   options,
@@ -170,24 +150,22 @@ function PillSelect({
   onToggle: (val: string) => void;
 }) {
   return (
-    <div className="mb-4">
-      <p className="text-sm font-semibold text-foreground/70 mb-2">{label}</p>
+    <div>
+      <label className="text-sm font-medium mb-2 block text-muted-foreground">
+        {label}
+      </label>
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => {
           const active = selected.includes(opt);
           return (
-            <button
+            <Badge
               key={opt}
+              variant={active ? "default" : "outline"}
+              className="cursor-pointer hover:bg-primary/10 transition-colors px-3 py-1.5"
               onClick={() => onToggle(opt)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all cursor-pointer
-                ${
-                  active
-                    ? "bg-primary text-white border-primary shadow-md scale-105"
-                    : "bg-white text-foreground/70 border-foreground/15 hover:border-primary/50 hover:bg-primary/5"
-                }`}
             >
               {opt}
-            </button>
+            </Badge>
           );
         })}
       </div>
@@ -195,328 +173,7 @@ function PillSelect({
   );
 }
 
-// ─── Suggestion Card ─────────────────────────────────────────
-function SuggestionCard({
-  s,
-  onFindEvents,
-}: {
-  s: Suggestion;
-  onFindEvents: (keyword: string) => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className="animate-fade-in bg-white rounded-2xl shadow-md border border-foreground/5 overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="p-5">
-        <div className="flex items-start gap-3 mb-3">
-          <span className="text-3xl">{s.emoji}</span>
-          <div>
-            <h3 className="text-lg font-bold text-foreground">{s.title}</h3>
-            <p className="text-sm text-muted mt-1">{s.description}</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 mt-3">
-          {[
-            { label: "Cost", value: s.details.cost },
-            { label: "Duration", value: s.details.duration },
-            { label: "Difficulty", value: s.details.difficulty },
-            { label: "Best For", value: s.details.bestFor },
-          ].map((d) => (
-            <div key={d.label} className="bg-background rounded-lg px-3 py-2">
-              <p className="text-xs text-muted">{d.label}</p>
-              <p className="text-sm font-medium">{d.value}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-3 bg-primary/5 rounded-lg px-3 py-2">
-          <p className="text-xs text-primary font-semibold">📍 Where</p>
-          <p className="text-sm">{s.details.location}</p>
-        </div>
-
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="mt-3 text-sm font-semibold text-primary hover:text-primary-light transition-colors cursor-pointer"
-        >
-          {expanded ? "Hide steps ▲" : "How to do it ▼"}
-        </button>
-        {expanded && (
-          <ol className="mt-2 space-y-1.5 text-sm text-foreground/80 list-decimal list-inside">
-            {s.steps.map((step, i) => (
-              <li key={i} className="leading-relaxed">
-                {step}
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-
-      {/* 1. Centered button */}
-      <div className="border-t border-foreground/5 px-5 py-3 bg-background/50 flex justify-center">
-        <button
-          onClick={() => onFindEvents(s.searchKeyword)}
-          className="text-sm font-semibold text-primary hover:text-white hover:bg-primary px-4 py-1.5 rounded-full border border-primary transition-all cursor-pointer"
-        >
-          🔍 Find Related Events Nearby
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Event Card ──────────────────────────────────────────────
-function EventCard({
-  e,
-  onAddToPlan,
-  isInPlan,
-}: {
-  e: EventItem;
-  onAddToPlan: (e: EventItem) => void;
-  isInPlan: boolean;
-}) {
-  const date = e.start ? formatEventDate(e.start) : "";
-
-  return (
-    <div className="animate-fade-in bg-white rounded-xl shadow-sm border border-foreground/5 overflow-hidden hover:shadow-md transition-shadow flex flex-col">
-      {e.logo && (
-        <img src={e.logo} alt="" className="w-full h-32 object-cover" />
-      )}
-      <div className="p-4 flex-1 flex flex-col">
-        <h4 className="font-semibold text-sm leading-snug line-clamp-2">
-          {e.name}
-        </h4>
-        {date && <p className="text-xs text-muted mt-1">📅 {date}</p>}
-        {e.venue && (
-          <p className="text-xs text-muted mt-0.5">
-            📍 {e.venue.name}
-            {e.venue.city ? `, ${e.venue.city}` : ""}
-          </p>
-        )}
-        {e.isFree && (
-          <span className="inline-block mt-2 text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full w-fit">
-            FREE
-          </span>
-        )}
-
-        <div className="mt-auto pt-3 flex flex-col gap-2">
-          <a
-            href={e.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-center text-sm font-bold text-white bg-primary hover:bg-primary-light rounded-lg px-3 py-2 transition-colors"
-          >
-            View Event →
-          </a>
-          <button
-            onClick={() => onAddToPlan(e)}
-            disabled={isInPlan}
-            className={`text-center text-sm font-semibold rounded-lg px-3 py-2 border transition-all cursor-pointer
-              ${
-                isInPlan
-                  ? "bg-green-50 text-green-600 border-green-200 cursor-default"
-                  : "text-accent border-accent hover:bg-accent hover:text-white"
-              }`}
-          >
-            {isInPlan ? "✓ Added to Plan" : "+ Add to Plan"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Plan Panel ──────────────────────────────────────────────
-function PlanPanel({
-  plan,
-  onRemove,
-  onOptimize,
-  optimizing,
-  routePlan,
-}: {
-  plan: EventItem[];
-  onRemove: (id: string) => void;
-  onOptimize: () => void;
-  optimizing: boolean;
-  routePlan: RoutePlan | null;
-}) {
-  if (plan.length === 0 && !routePlan) return null;
-
-  return (
-    <div className="bg-white rounded-2xl shadow-md border border-accent/20 p-5 mb-8 animate-fade-in">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          📋 My Plan
-          <span className="text-sm font-normal text-muted">
-            ({plan.length} event{plan.length !== 1 ? "s" : ""})
-          </span>
-        </h2>
-      </div>
-
-      {plan.length > 0 && (
-        <div className="space-y-2 mb-4">
-          {plan.map((e) => (
-            <div
-              key={e.id}
-              className="flex items-center justify-between bg-background rounded-lg px-3 py-2"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{e.name}</p>
-                <p className="text-xs text-muted">
-                  {e.start ? formatEventDate(e.start) : "Flexible time"}
-                  {e.venue ? ` · ${e.venue.name}` : ""}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 ml-2">
-                <a
-                  href={e.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-primary hover:underline whitespace-nowrap"
-                >
-                  View →
-                </a>
-                <button
-                  onClick={() => onRemove(e.id)}
-                  className="text-xs text-red-400 hover:text-red-600 cursor-pointer"
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {plan.length >= 2 && (
-        <button
-          onClick={onOptimize}
-          disabled={optimizing}
-          className={`w-full py-3 rounded-full text-white font-bold text-sm transition-all cursor-pointer
-            ${
-              optimizing
-                ? "bg-muted cursor-not-allowed"
-                : "bg-gradient-to-r from-accent to-orange-500 hover:from-orange-500 hover:to-accent shadow-md"
-            }`}
-        >
-          {optimizing ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="animate-spin">⚙️</span> AI is planning your route...
-            </span>
-          ) : (
-            "🗺️ Optimize My Route with AI"
-          )}
-        </button>
-      )}
-
-      {plan.length === 1 && !routePlan && (
-        <p className="text-xs text-muted text-center">
-          Add at least 2 events to optimize your route
-        </p>
-      )}
-
-      {routePlan && (
-        <div className="mt-5 border-t border-foreground/5 pt-5">
-          <h3 className="text-lg font-bold mb-2">🗺️ Your Optimized Route</h3>
-          <p className="text-sm text-muted mb-4">{routePlan.summary}</p>
-
-          <div className="space-y-0">
-            {routePlan.route.map((stop, i) => (
-              <div key={i} className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold shrink-0">
-                    {stop.order}
-                  </div>
-                  {i < routePlan.route.length - 1 && (
-                    <div className="w-0.5 h-full min-h-[40px] bg-primary/20" />
-                  )}
-                </div>
-                <div className="pb-4 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-sm">{stop.eventName}</p>
-                      <p className="text-xs text-accent font-medium mt-0.5">
-                        🕐 {formatEventDate(stop.time)}
-                      </p>
-                    </div>
-                    {stop.eventUrl && stop.eventUrl !== "N/A" && (
-                      <a
-                        href={stop.eventUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-white bg-primary hover:bg-primary-light px-3 py-1 rounded-full shrink-0 transition-colors"
-                      >
-                        Go →
-                      </a>
-                    )}
-                  </div>
-                  {stop.travelTip && (
-                    <p className="text-xs text-muted mt-1">
-                      🚗 {stop.travelTip}
-                    </p>
-                  )}
-                  <p className="text-xs text-foreground/60 mt-0.5 italic">
-                    {stop.reason}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            <div className="bg-background rounded-lg px-3 py-2">
-              <p className="text-xs text-muted">Total Time</p>
-              <p className="text-sm font-semibold">
-                {routePlan.estimatedTotalTime}
-              </p>
-            </div>
-            <div className="bg-background rounded-lg px-3 py-2">
-              <p className="text-xs text-muted">Est. Cost</p>
-              <p className="text-sm font-semibold">
-                {routePlan.estimatedTotalCost}
-              </p>
-            </div>
-          </div>
-
-          {routePlan.tips && routePlan.tips.length > 0 && (
-            <div className="mt-3 bg-accent/5 rounded-lg px-3 py-2">
-              <p className="text-xs font-semibold text-accent mb-1">
-                💡 Pro Tips
-              </p>
-              <ul className="text-xs text-foreground/70 space-y-0.5">
-                {routePlan.tips.map((tip, i) => (
-                  <li key={i}>• {tip}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Main Page ───────────────────────────────────────────────
-type DailyPickEvent = EventItem;
-
-interface SerializedDailyPick {
-  id: string;
-  pickDate: string;
-  reason: string;
-  event: DailyPickEvent;
-  seenAt: string | null;
-  dismissedAt: string | null;
-}
-
-export interface HomeClientProps {
-  isSignedIn: boolean;
-  planId: string | null;
-  initialLocation: string;
-  initialPlan: EventItem[];
-  initialRoutePlan: RoutePlan | null;
-  dailyPick: SerializedDailyPick | null;
-}
-
 export default function HomeClient({
   isSignedIn,
   planId,
@@ -525,25 +182,21 @@ export default function HomeClient({
   initialRoutePlan,
   dailyPick,
 }: HomeClientProps) {
-  // Input mode
   const [mode, setMode] = useState<"type" | "pick">("type");
   const [prompt, setPrompt] = useState("");
   const [location, setLocation] = useState(initialLocation);
 
-  // Option-picker state
   const [moods, setMoods] = useState<string[]>([]);
   const [companions, setCompanions] = useState<string[]>([]);
   const [budget, setBudget] = useState<string[]>([]);
   const [vibes, setVibes] = useState<string[]>([]);
 
-  // Results
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Events pagination, sorting & scroll ref
   const eventsSectionRef = useRef<HTMLDivElement>(null);
   const [eventsContinuation, setEventsContinuation] = useState<string | null>(null);
   const [eventsLoadingMore, setEventsLoadingMore] = useState(false);
@@ -552,11 +205,9 @@ export default function HomeClient({
   const [categoryFilter, setCategoryFilter] = useState("");
   const [eventsQuery, setEventsQuery] = useState("");
 
-  // Suggestions "load more"
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const lastPromptBody = useRef<Record<string, unknown> | null>(null);
 
-  // Plan & route — initial values come from the server for signed-in users
   const [plan, setPlan] = useState<EventItem[]>(initialPlan);
   const [routePlan, setRoutePlan] = useState<RoutePlan | null>(initialRoutePlan);
   const [optimizing, setOptimizing] = useState(false);
@@ -570,8 +221,6 @@ export default function HomeClient({
 
   function addToPlan(e: EventItem) {
     if (planIds.has(e.id)) return;
-
-    // Optimistic update for both signed-in and anonymous users
     setPlan((prev) => [...prev, e]);
     setRoutePlan(null);
 
@@ -591,7 +240,6 @@ export default function HomeClient({
             isFree: e.isFree,
             imageUrl: e.logo || null,
           });
-          // Attach the DB id so we can delete by it later
           setPlan((prev) =>
             prev.map((p) =>
               p.id === e.id ? { ...p, planEventId: saved.id } : p
@@ -599,7 +247,6 @@ export default function HomeClient({
           );
         } catch (err) {
           console.error("Failed to save event to plan:", err);
-          // Roll back optimistic add
           setPlan((prev) => prev.filter((p) => p.id !== e.id));
         }
       });
@@ -617,7 +264,6 @@ export default function HomeClient({
           await removeEventFromPlan(target.planEventId!);
         } catch (err) {
           console.error("Failed to remove event from plan:", err);
-          // Roll back optimistic removal
           if (target) setPlan((prev) => [...prev, target]);
         }
       });
@@ -636,7 +282,6 @@ export default function HomeClient({
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setRoutePlan(data);
-      // Cache the route on the server for signed-in users
       if (isSignedIn && planId) {
         saveOptimizedRoute(planId, data).catch((err) =>
           console.error("Failed to save optimized route:", err)
@@ -649,7 +294,6 @@ export default function HomeClient({
     }
   }
 
-  // ─── Suggestions ───────────────────────────────────────────
   async function handleSubmit() {
     setLoading(true);
     setError("");
@@ -688,7 +332,6 @@ export default function HomeClient({
     }
   }
 
-  // 4. Load more suggestions from Gemini
   async function loadMoreSuggestions() {
     if (!lastPromptBody.current) return;
     setSuggestionsLoading(true);
@@ -713,7 +356,6 @@ export default function HomeClient({
     }
   }
 
-  // ─── Events ────────────────────────────────────────────────
   const fetchEvents = useCallback(
     async (keyword: string) => {
       setEventsLoading(true);
@@ -727,9 +369,11 @@ export default function HomeClient({
         const data = await res.json();
         setEvents(data.events || []);
         setEventsContinuation(data.continuation || null);
-        // Scroll to events section after state updates
         setTimeout(() => {
-          eventsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          eventsSectionRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
         }, 100);
       } catch {
         // silently fail
@@ -740,7 +384,6 @@ export default function HomeClient({
     [location]
   );
 
-  // 3. Load more events (infinite scroll / button)
   async function loadMoreEvents() {
     if (!eventsContinuation || eventsLoadingMore) return;
     setEventsLoadingMore(true);
@@ -767,89 +410,72 @@ export default function HomeClient({
       ? prompt.trim().length > 0
       : moods.length > 0 || vibes.length > 0;
 
-  // Apply filters
   const filteredByWhen = filterByWhen(events, whenFilter);
   const filteredByPrice = filterByPrice(filteredByWhen, priceFilter);
   const filteredByCategory = filterByCategory(filteredByPrice, categoryFilter);
   const displayEvents = [...filteredByCategory].sort(
-    (a, b) => new Date(a.start || "9999").getTime() - new Date(b.start || "9999").getTime()
+    (a, b) =>
+      new Date(a.start || "9999").getTime() -
+      new Date(b.start || "9999").getTime()
   );
 
-  // Gather unique categories from loaded events for dynamic filter
-  const availableCategories = [...new Set(events.map((e) => e.category).filter(Boolean))];
+  const availableCategories = [
+    ...new Set(events.map((e) => e.category).filter(Boolean)),
+  ];
+
+  const hasFiltersActive =
+    whenFilter !== "all" || priceFilter !== "all" || !!categoryFilter;
 
   return (
-    <div className="flex flex-col flex-1">
-      {/* Hero */}
-      <header className="bg-gradient-to-br from-primary via-primary-light to-indigo-400 text-white py-12 px-6 text-center">
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">
-          🎉 iEventer
-        </h1>
-        <p className="mt-3 text-lg text-white/80 max-w-lg mx-auto">
-          Bored? Not sure what to do? Let AI find your next adventure —
-          activities, events, and hidden gems near you.
-        </p>
-        {plan.length > 0 && (
-          <div className="mt-4">
-            <a
-              href="#my-plan"
-              className="inline-block bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-white/30 transition-colors"
-            >
-              📋 My Plan ({plan.length}) — View below
-            </a>
-          </div>
-        )}
-      </header>
+    <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-12">
+      {/* Daily surprise pick */}
+      {dailyPick && (
+        <DailyPickCard initialPick={dailyPick} planId={planId} />
+      )}
 
-      <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-8">
-        {/* Daily surprise pick (signed-in + onboarded users only) */}
-        {dailyPick && (
-          <DailyPickCard initialPick={dailyPick} planId={planId} />
-        )}
+      {/* Hero (anonymous only — signed-in users see daily pick instead) */}
+      {!isSignedIn && (
+        <section className="text-center py-10 max-w-2xl mx-auto space-y-4 animate-fade-in">
+          <h1 className="font-display text-5xl md:text-6xl tracking-tight">
+            Bored?
+          </h1>
+          <p className="text-xl text-muted-foreground">
+            Let AI find your next adventure.
+          </p>
+        </section>
+      )}
 
-        {/* Mode toggle */}
-        <div className="flex justify-center gap-2 mb-6">
-          {(["type", "pick"] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all cursor-pointer
-                ${
-                  mode === m
-                    ? "bg-primary text-white shadow-md"
-                    : "bg-white text-foreground/60 border border-foreground/10 hover:border-primary/40"
-                }`}
-            >
-              {m === "type" ? "✍️ Type It" : "🎯 Pick Options"}
-            </button>
-          ))}
-        </div>
+      {/* Discovery input */}
+      <section>
+        <div className="bg-card rounded-2xl border border-border p-6 space-y-5 max-w-3xl mx-auto">
+          <Tabs
+            value={mode}
+            onValueChange={(v) => setMode(v as "type" | "pick")}
+          >
+            <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
+              <TabsTrigger value="type">✍️ Type It</TabsTrigger>
+              <TabsTrigger value="pick">🎯 Pick Options</TabsTrigger>
+            </TabsList>
 
-        {/* Input area */}
-        <div className="bg-white rounded-2xl shadow-md border border-foreground/5 p-6 mb-8">
-          {mode === "type" ? (
-            <>
-              <label className="block text-sm font-semibold text-foreground/70 mb-2">
-                What are you in the mood for?
-              </label>
-              <textarea
+            <TabsContent value="type" className="space-y-4">
+              <Textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="e.g. I'm bored on a Saturday with friends, we have no money but want to do something fun outdoors..."
+                placeholder="I'm bored on a Saturday with friends, no money, want something outdoors..."
                 rows={3}
-                className="w-full rounded-xl border border-foreground/10 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+                className="text-base min-h-[120px] resize-none"
               />
-            </>
-          ) : (
-            <>
+            </TabsContent>
+
+            <TabsContent value="pick" className="space-y-5">
               <PillSelect
-                label="How are you feeling?"
+                label="Mood"
                 options={MOODS}
                 selected={moods}
                 onToggle={(v) => toggle(moods, v, setMoods)}
               />
               <PillSelect
-                label="Who's joining?"
+                label="Companions"
                 options={COMPANIONS}
                 selected={companions}
                 onToggle={(v) => toggle(companions, v, setCompanions)}
@@ -861,260 +487,377 @@ export default function HomeClient({
                 onToggle={(v) => toggle(budget, v, setBudget)}
               />
               <PillSelect
-                label="What vibes are you looking for?"
+                label="Vibes"
                 options={VIBES}
                 selected={vibes}
                 onToggle={(v) => toggle(vibes, v, setVibes)}
               />
-            </>
-          )}
+            </TabsContent>
+          </Tabs>
 
-          <div className="mt-4">
-            <label className="block text-sm font-semibold text-foreground/70 mb-2">
-              📍 Your location (optional, for nearby events)
-            </label>
-            <input
+          <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g. San Francisco, CA"
-              className="w-full rounded-xl border border-foreground/10 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              placeholder="Location (e.g., Toronto, ON)"
+              className="pl-10"
             />
           </div>
 
-          <button
+          <Button
+            size="lg"
             onClick={handleSubmit}
             disabled={!canSubmit || loading}
-            className={`mt-5 w-full py-3 rounded-full text-white font-bold text-base transition-all cursor-pointer
-              ${
-                canSubmit && !loading
-                  ? "bg-primary hover:bg-primary-light shadow-md glow"
-                  : "bg-muted cursor-not-allowed"
-              }`}
+            className="w-full"
           >
             {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin">⚙️</span> Finding fun stuff...
-              </span>
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Finding fun stuff...
+              </>
             ) : (
-              "✨ Find Something Fun!"
+              <>
+                <Sparkles className="w-4 h-4" />
+                Find Something Fun
+              </>
             )}
-          </button>
+          </Button>
         </div>
+      </section>
 
-        {/* Error */}
-        {error && (
-          <div className="bg-red-50 text-red-600 rounded-xl px-4 py-3 text-sm mb-6 border border-red-200">
-            {error}
+      {/* Error */}
+      {error && (
+        <div className="max-w-3xl mx-auto bg-destructive/10 border border-destructive/20 text-destructive rounded-xl px-4 py-3 text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* My Plan panel */}
+      {plan.length > 0 && (
+        <section
+          id="my-plan"
+          className="bg-gradient-to-br from-secondary/10 via-card to-accent/10 rounded-2xl border-2 border-secondary/30 p-6 space-y-4 max-w-3xl mx-auto animate-fade-in"
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-2xl">My Plan</h2>
+            <Badge variant="secondary">
+              {plan.length} event{plan.length === 1 ? "" : "s"}
+            </Badge>
           </div>
-        )}
 
-        {/* Plan Panel */}
-        <div id="my-plan">
-          <PlanPanel
-            plan={plan}
-            onRemove={removeFromPlan}
-            onOptimize={optimizeRoute}
-            optimizing={optimizing}
-            routePlan={routePlan}
-          />
-        </div>
-
-        {/* 4. Suggestions — with Load More */}
-        {suggestions.length > 0 && (
-          <section className="mb-10">
-            <h2 className="text-2xl font-bold mb-4">
-              🎯 Here&apos;s What We Found
-            </h2>
-            <div className="grid gap-5">
-              {suggestions.map((s, i) => (
-                <SuggestionCard key={i} s={s} onFindEvents={fetchEvents} />
-              ))}
-            </div>
-            <div className="mt-5 text-center">
-              <button
-                onClick={loadMoreSuggestions}
-                disabled={suggestionsLoading}
-                className={`px-6 py-2.5 rounded-full text-sm font-semibold border transition-all cursor-pointer
-                  ${
-                    suggestionsLoading
-                      ? "bg-muted text-white border-muted cursor-not-allowed"
-                      : "text-primary border-primary hover:bg-primary hover:text-white"
-                  }`}
+          <div className="space-y-2">
+            {plan.map((e) => (
+              <div
+                key={e.id}
+                className="bg-card rounded-xl p-3 flex items-center justify-between gap-3 border border-border/50"
               >
-                {suggestionsLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="animate-spin">⚙️</span> Generating more...
-                  </span>
-                ) : (
-                  "💡 Show Me More Ideas"
-                )}
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* Events loading */}
-        <div ref={eventsSectionRef} />
-        {eventsLoading && (
-          <div className="text-center text-muted py-8">
-            <span className="animate-spin inline-block mr-2">⚙️</span>
-            Searching nearby events...
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{e.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {e.start ? formatEventDate(e.start) : "Flexible time"}
+                    {e.venue ? ` · ${e.venue.name}` : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button asChild size="sm" variant="ghost">
+                    <a
+                      href={e.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      View
+                    </a>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => removeFromPlan(e.id)}
+                    aria-label="Remove from plan"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
-        )}
 
-        {/* 2 & 3. Events — with sort/filter + infinite scroll */}
-        {events.length > 0 && (
-          <section className="mb-10">
-            <h2 className="text-xl font-bold mb-3">
-              📍 Related Events Near You
+          {plan.length >= 2 && !routePlan && (
+            <Button
+              variant="secondary"
+              size="lg"
+              className="w-full"
+              onClick={optimizeRoute}
+              disabled={optimizing}
+            >
+              {optimizing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  AI is planning your route...
+                </>
+              ) : (
+                <>
+                  <MapIcon className="w-4 h-4" />
+                  Optimize Route with AI
+                </>
+              )}
+            </Button>
+          )}
+
+          {plan.length === 1 && !routePlan && (
+            <p className="text-sm text-center text-muted-foreground">
+              Add at least 2 events to optimize your route.
+            </p>
+          )}
+
+          {routePlan && (
+            <div className="border-t border-border pt-5 space-y-4">
+              <div>
+                <h3 className="font-display text-xl mb-2">Optimized Route</h3>
+                <p className="text-sm text-muted-foreground">
+                  {routePlan.summary}
+                </p>
+              </div>
+
+              <div>
+                {routePlan.route.map((stop, i) => (
+                  <RouteTimelineNode
+                    key={i}
+                    stop={stop}
+                    isLast={i === routePlan.route.length - 1}
+                  />
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-card rounded-xl px-3 py-2 border border-border/50">
+                  <p className="text-xs text-muted-foreground">Total Time</p>
+                  <p className="font-medium">{routePlan.estimatedTotalTime}</p>
+                </div>
+                <div className="bg-card rounded-xl px-3 py-2 border border-border/50">
+                  <p className="text-xs text-muted-foreground">Est. Cost</p>
+                  <p className="font-medium">{routePlan.estimatedTotalCost}</p>
+                </div>
+              </div>
+
+              {routePlan.tips && routePlan.tips.length > 0 && (
+                <div className="bg-accent/30 rounded-xl p-3">
+                  <p className="text-xs font-semibold mb-1.5">💡 Pro tips</p>
+                  <ul className="text-sm space-y-0.5">
+                    {routePlan.tips.map((tip, i) => (
+                      <li key={i}>• {tip}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* AI Suggestions */}
+      {suggestions.length > 0 && (
+        <section className="space-y-6 animate-fade-in">
+          <div>
+            <h2 className="font-display text-2xl mb-1">
+              AI Suggestions for You
             </h2>
+            <p className="text-muted-foreground">
+              Based on your interests and what you&apos;re looking for.
+            </p>
+          </div>
 
-            {/* Filters */}
-            <div className="bg-white rounded-xl border border-foreground/5 p-4 mb-4 space-y-3">
-              {/* When */}
-              <div>
-                <p className="text-xs font-semibold text-foreground/50 mb-1.5">When</p>
-                <div className="flex flex-wrap gap-1.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {suggestions.map((s, i) => (
+              <AISuggestionCard
+                key={i}
+                suggestion={s}
+                onFindEvents={fetchEvents}
+              />
+            ))}
+          </div>
+
+          <div className="text-center">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={loadMoreSuggestions}
+              disabled={suggestionsLoading}
+            >
+              {suggestionsLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating more...
+                </>
+              ) : (
+                "💡 Show Me More Ideas"
+              )}
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {/* Events */}
+      <div ref={eventsSectionRef} />
+      {eventsLoading && (
+        <div className="text-center py-10 text-muted-foreground flex items-center justify-center gap-2">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          Searching nearby events...
+        </div>
+      )}
+
+      {events.length > 0 && (
+        <section className="space-y-6 animate-fade-in">
+          <div>
+            <h2 className="font-display text-2xl mb-1">
+              Events Happening Near You
+            </h2>
+            <p className="text-muted-foreground">
+              Real events from Eventbrite, filterable by when, price, and category.
+            </p>
+          </div>
+
+          {/* Filters */}
+          <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Filter className="w-4 h-4" />
+              Filters
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">When:</span>
+                <div className="flex flex-wrap gap-1">
                   {WHEN_FILTERS.map((opt) => (
-                    <button
+                    <Badge
                       key={opt.value}
+                      variant={whenFilter === opt.value ? "default" : "outline"}
+                      className="cursor-pointer"
                       onClick={() => setWhenFilter(opt.value)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer
-                        ${
-                          whenFilter === opt.value
-                            ? "bg-primary text-white border-primary"
-                            : "bg-background text-foreground/60 border-foreground/10 hover:border-primary/40"
-                        }`}
                     >
                       {opt.label}
-                    </button>
+                    </Badge>
                   ))}
                 </div>
               </div>
 
-              {/* Price */}
-              <div>
-                <p className="text-xs font-semibold text-foreground/50 mb-1.5">Price</p>
-                <div className="flex flex-wrap gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">Price:</span>
+                <div className="flex flex-wrap gap-1">
                   {PRICE_FILTERS.map((opt) => (
-                    <button
+                    <Badge
                       key={opt.value}
+                      variant={priceFilter === opt.value ? "default" : "outline"}
+                      className="cursor-pointer"
                       onClick={() => setPriceFilter(opt.value)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer
-                        ${
-                          priceFilter === opt.value
-                            ? "bg-primary text-white border-primary"
-                            : "bg-background text-foreground/60 border-foreground/10 hover:border-primary/40"
-                        }`}
                     >
                       {opt.label}
-                    </button>
+                    </Badge>
                   ))}
                 </div>
               </div>
 
-              {/* Category — dynamic from results */}
               {availableCategories.length > 1 && (
-                <div>
-                  <p className="text-xs font-semibold text-foreground/50 mb-1.5">Category</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">Category:</span>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge
+                      variant={!categoryFilter ? "default" : "outline"}
+                      className="cursor-pointer"
                       onClick={() => setCategoryFilter("")}
-                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer
-                        ${
-                          !categoryFilter
-                            ? "bg-primary text-white border-primary"
-                            : "bg-background text-foreground/60 border-foreground/10 hover:border-primary/40"
-                        }`}
                     >
                       All
-                    </button>
+                    </Badge>
                     {availableCategories.map((cat) => (
-                      <button
+                      <Badge
                         key={cat}
+                        variant={categoryFilter === cat ? "default" : "outline"}
+                        className="cursor-pointer"
                         onClick={() => setCategoryFilter(cat)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer
-                          ${
-                            categoryFilter === cat
-                              ? "bg-primary text-white border-primary"
-                              : "bg-background text-foreground/60 border-foreground/10 hover:border-primary/40"
-                          }`}
                       >
                         {cat}
-                      </button>
+                      </Badge>
                     ))}
                   </div>
                 </div>
               )}
-
-              {/* Active filter count */}
-              {(whenFilter !== "all" || priceFilter !== "all" || categoryFilter) && (
-                <div className="flex items-center justify-between pt-1 border-t border-foreground/5">
-                  <p className="text-xs text-muted">
-                    Showing {displayEvents.length} of {events.length} events
-                  </p>
-                  <button
-                    onClick={() => {
-                      setWhenFilter("all");
-                      setPriceFilter("all");
-                      setCategoryFilter("");
-                    }}
-                    className="text-xs text-red-400 hover:text-red-600 cursor-pointer"
-                  >
-                    Clear filters
-                  </button>
-                </div>
-              )}
             </div>
 
-            {/* Event grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {displayEvents.map((e) => (
-                <EventCard
-                  key={e.id}
-                  e={e}
-                  onAddToPlan={addToPlan}
-                  isInPlan={planIds.has(e.id)}
-                />
-              ))}
-            </div>
-
-            {/* Load more events */}
-            {eventsContinuation && (
-              <div className="mt-5 text-center">
-                <button
-                  onClick={loadMoreEvents}
-                  disabled={eventsLoadingMore}
-                  className={`px-6 py-2.5 rounded-full text-sm font-semibold border transition-all cursor-pointer
-                    ${
-                      eventsLoadingMore
-                        ? "bg-muted text-white border-muted cursor-not-allowed"
-                        : "text-primary border-primary hover:bg-primary hover:text-white"
-                    }`}
+            {hasFiltersActive && (
+              <div className="flex items-center justify-between pt-1 border-t border-border/50">
+                <p className="text-xs text-muted-foreground">
+                  Showing {displayEvents.length} of {events.length} events
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setWhenFilter("all");
+                    setPriceFilter("all");
+                    setCategoryFilter("");
+                  }}
                 >
-                  {eventsLoadingMore ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="animate-spin">⚙️</span> Loading more...
-                    </span>
-                  ) : (
-                    "Load More Events ↓"
-                  )}
-                </button>
+                  Clear filters
+                </Button>
               </div>
             )}
+          </div>
 
-            {displayEvents.length === 0 && events.length > 0 && (
-              <p className="text-center text-sm text-muted py-4">
-                No events match your filters. Try adjusting or clearing them.
-              </p>
-            )}
-          </section>
-        )}
-      </main>
+          {/* Event grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {displayEvents.map((e) => (
+              <EventCard
+                key={e.id}
+                event={e}
+                onAddToPlan={addToPlan}
+                isInPlan={planIds.has(e.id)}
+              />
+            ))}
+          </div>
 
-      <footer className="text-center text-xs text-muted py-6 border-t border-foreground/5">
-        Built with Gemini AI + Eventbrite &middot; iEventer &copy; 2026
-      </footer>
-    </div>
+          {displayEvents.length === 0 && events.length > 0 && (
+            <p className="text-center text-sm text-muted-foreground py-4">
+              No events match your filters. Try adjusting or clearing them.
+            </p>
+          )}
+
+          {eventsContinuation && (
+            <div className="text-center pt-4">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={loadMoreEvents}
+                disabled={eventsLoadingMore}
+              >
+                {eventsLoadingMore ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading more...
+                  </>
+                ) : (
+                  "Load More Events"
+                )}
+              </Button>
+            </div>
+          )}
+        </section>
+      )}
+    </main>
   );
 }
+
+// Local helper used only in the inline plan list above
+function formatEventDate(input: string): string {
+  if (!input) return "";
+  const d = new Date(input);
+  if (isNaN(d.getTime())) return input;
+  return d.toLocaleString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+// Suppress unused import warning during dev — `cn` may be used in future variants.
+void cn;

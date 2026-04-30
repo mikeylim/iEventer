@@ -2,7 +2,32 @@ import { auth } from "@/lib/auth";
 import { getPlanWithEvents } from "@/lib/plans";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import {
+  Calendar,
+  MapPin,
+  ArrowLeft,
+  ArrowRight,
+  Edit,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { MakeCurrentButton } from "./MakeCurrentButton";
+import { PlanDescriptionForm } from "./PlanDescriptionForm";
+
+export const dynamic = "force-dynamic";
+
+function formatEventDate(input: string): string {
+  if (!input) return "";
+  const d = new Date(input);
+  if (isNaN(d.getTime())) return input;
+  return d.toLocaleString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export default async function PlanDetailPage({
   params,
@@ -23,90 +48,134 @@ export default async function PlanDetailPage({
   const { plan, events } = data;
 
   return (
-    <div className="flex-1 max-w-3xl w-full mx-auto px-4 py-10">
+    <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full space-y-8">
       <Link
         href="/plans"
-        className="text-sm text-primary hover:underline mb-4 inline-block"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
-        ← All plans
+        <ArrowLeft className="w-4 h-4" />
+        All plans
       </Link>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">
-            {plan.title}
-          </h1>
-          <p className="text-xs text-muted mt-1">
-            {events.length} event{events.length === 1 ? "" : "s"} · Updated{" "}
-            {new Intl.DateTimeFormat("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            }).format(plan.updatedAt)}
-          </p>
+      {/* Plan header */}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="font-display text-4xl mb-2">{plan.title}</h1>
+            <div className="flex items-center gap-3 text-muted-foreground text-sm">
+              <div className="flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                <span>
+                  {events.length} event{events.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <span>•</span>
+              <span>
+                Updated{" "}
+                {new Intl.DateTimeFormat("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                }).format(plan.updatedAt)}
+              </span>
+            </div>
+          </div>
+          <MakeCurrentButton planId={plan.id} />
         </div>
-        <MakeCurrentButton planId={plan.id} />
+
+        <PlanDescriptionForm
+          planId={plan.id}
+          initialDescription={plan.description || ""}
+        />
       </div>
 
+      {/* Events list */}
       {events.length === 0 ? (
-        <p className="text-center text-sm text-muted py-10">
-          No events in this plan yet.
-        </p>
+        <div className="bg-card rounded-2xl border border-dashed border-border p-12 text-center space-y-3">
+          <div className="text-5xl">📅</div>
+          <p className="text-muted-foreground">
+            No events in this plan yet.
+          </p>
+          <Button asChild>
+            <Link href="/">
+              <Edit className="w-4 h-4" />
+              Add events
+            </Link>
+          </Button>
+        </div>
       ) : (
-        <div className="space-y-3">
-          {events.map((e) => (
-            <div
-              key={e.id}
-              className="bg-white rounded-xl shadow-sm border border-foreground/5 p-4 flex gap-4"
-            >
-              {e.imageUrl && (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={e.imageUrl}
-                  alt=""
-                  className="w-24 h-24 object-cover rounded-lg shrink-0"
-                />
-              )}
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-sm">{e.name}</h3>
-                {e.startAt && (
-                  <p className="text-xs text-muted mt-0.5">
-                    📅{" "}
-                    {new Intl.DateTimeFormat("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    }).format(e.startAt)}
-                  </p>
-                )}
-                {e.venueName && (
-                  <p className="text-xs text-muted mt-0.5 truncate">
-                    📍 {e.venueName}
-                    {e.venueAddress ? `, ${e.venueAddress}` : ""}
-                  </p>
-                )}
-                {e.isFree && (
-                  <span className="inline-block mt-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                    FREE
-                  </span>
-                )}
-                <div className="mt-2">
-                  <a
-                    href={e.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline"
-                  >
-                    View event page →
-                  </a>
+        <div className="space-y-4">
+          {events.map((e, index) => (
+            <div key={e.id}>
+              <div className="bg-card rounded-2xl border border-border overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                <div className="flex flex-col sm:flex-row">
+                  {e.imageUrl ? (
+                    <div className="sm:w-48 aspect-[4/3] sm:aspect-auto overflow-hidden shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={e.imageUrl}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="sm:w-48 aspect-[4/3] sm:aspect-auto bg-gradient-to-br from-muted to-accent/30 flex items-center justify-center shrink-0">
+                      <Calendar className="w-10 h-10 text-muted-foreground/40" />
+                    </div>
+                  )}
+                  <div className="flex-1 p-5 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline">{index + 1}</Badge>
+                      {e.startAt && (
+                        <span className="text-sm text-muted-foreground">
+                          {formatEventDate(e.startAt.toISOString())}
+                        </span>
+                      )}
+                      {e.isFree && (
+                        <Badge variant="secondary" className="ml-auto">
+                          FREE
+                        </Badge>
+                      )}
+                    </div>
+                    <h3 className="font-display text-xl">{e.name}</h3>
+                    <div className="space-y-1 text-sm text-muted-foreground">
+                      {e.venueName && (
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 shrink-0" />
+                          <span>
+                            {e.venueName}
+                            {e.venueAddress ? `, ${e.venueAddress}` : ""}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <Button asChild variant="outline" size="sm">
+                      <a
+                        href={e.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View Event Page
+                        <ArrowRight className="w-4 h-4" />
+                      </a>
+                    </Button>
+                  </div>
                 </div>
               </div>
+
+              {/* Travel time indicator between events */}
+              {index < events.length - 1 && (
+                <div className="flex items-center justify-center py-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-full">
+                    <ArrowRight className="w-4 h-4" />
+                    <span>Travel between</span>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
-    </div>
+    </main>
   );
 }

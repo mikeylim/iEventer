@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       ? `\n\nUser profile: ${summarizeProfile(sessionProfile)}. Weight suggestions toward these interests when relevant, but still vary the ideas.`
       : "";
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     const excludeNote = exclude && exclude.length > 0
       ? `\n\nIMPORTANT: Do NOT suggest any of these activities (already suggested): ${exclude.join(", ")}. Come up with completely different ideas.`
@@ -79,8 +79,27 @@ Make the steps actionable and specific — tell them HOW to do it, not just what
   } catch (error) {
     console.error("Gemini API error:", error);
     return NextResponse.json(
-      { error: "Failed to generate suggestions. Check your Gemini API key." },
+      { error: friendlyGeminiError(error) },
       { status: 500 }
     );
   }
+}
+
+// Translate raw SDK errors into a friendly UI message.
+function friendlyGeminiError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+
+  if (/RESOURCE_EXHAUSTED|429|quota/i.test(msg)) {
+    return "AI is busy right now (rate limit). Try again in a moment.";
+  }
+  if (/UNAUTHENTICATED|401|API key/i.test(msg)) {
+    return "Gemini API key is invalid or missing.";
+  }
+  if (/PERMISSION_DENIED|403/i.test(msg)) {
+    return "Gemini API key doesn't have access to this model.";
+  }
+  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|UND_ERR_SOCKET/i.test(msg)) {
+    return "Couldn't reach Gemini. Check your internet connection.";
+  }
+  return "Failed to generate suggestions. Try again.";
 }

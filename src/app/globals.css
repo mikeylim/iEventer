@@ -1,31 +1,131 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
+/* ─── iEventer brand palette ──────────────────────────────────
+   Teal / sage / cream — fresh, distinct from SaaS purple/indigo.
+*/
 :root {
-  --background: #f8fafc;
-  --foreground: #1e293b;
-  --primary: #6366f1;
-  --primary-light: #818cf8;
-  --accent: #f59e0b;
-  --card: #ffffff;
-  --muted: #94a3b8;
+  --font-size: 16px;
+
+  /* Brand */
+  --brand-teal: #35858E;
+  --brand-sage: #7DA78C;
+  --brand-green: #C2D099;
+  --brand-cream: #E6EEC9;
+  --brand-charcoal: #2C3333;
+
+  /* Surfaces */
+  --background: #FAFBF8;
+  --foreground: #2C3333;
+  --card: #FFFFFF;
+  --card-foreground: #2C3333;
+  --popover: #FFFFFF;
+  --popover-foreground: #2C3333;
+
+  /* Semantic */
+  --primary: #35858E;
+  --primary-foreground: #FFFFFF;
+  --secondary: #7DA78C;
+  --secondary-foreground: #FFFFFF;
+  --muted: #E6EEC9;
+  --muted-foreground: #6B7280;
+  --accent: #C2D099;
+  --accent-foreground: #2C3333;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #D4E5D0;
+  --input: transparent;
+  --input-background: #FFFFFF;
+  --ring: #8B9E8A;
+
+  --radius: 1rem;
+
+  /* Fonts (set by next/font in layout.tsx) */
+  --font-display: var(--font-playfair, "Playfair Display", serif);
+  --font-body: var(--font-inter, "Inter", system-ui, sans-serif);
+}
+
+.dark {
+  --background: #0F1714;
+  --foreground: #E6EEC9;
+  --card: #1A2422;
+  --card-foreground: #E6EEC9;
+  --popover: #1A2422;
+  --popover-foreground: #E6EEC9;
+
+  --primary: #7DA78C;
+  --primary-foreground: #0F1714;
+  --secondary: #35858E;
+  --secondary-foreground: #FAFBF8;
+  --muted: #243130;
+  --muted-foreground: #9CA89E;
+  --accent: #2D3D38;
+  --accent-foreground: #C2D099;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: #2D3D38;
+  --input: transparent;
+  --input-background: #1A2422;
+  --ring: #7DA78C;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-primary: var(--primary);
-  --color-primary-light: var(--primary-light);
-  --color-accent: var(--accent);
   --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-display: var(--font-display);
+  --font-sans: var(--font-body);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    font-size: var(--font-size);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* ─── Utilities ──────────────────────────────────── */
+
+.font-display {
+  font-family: var(--font-display);
 }
 
 @keyframes fade-in {
@@ -35,13 +135,4 @@ body {
 
 .animate-fade-in {
   animation: fade-in 0.4s ease-out forwards;
-}
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.15); }
-  50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.3); }
-}
-
-.glow {
-  animation: pulse-glow 2s ease-in-out infinite;
 }

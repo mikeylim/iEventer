@@ -1,18 +1,22 @@
 "use client";
 
-import { useTransition } from "react";
+import { useTransition, type ReactNode } from "react";
 import { deletePlan } from "@/lib/plans";
 
 export function DeletePlanButton({
   planId,
   planTitle,
+  children,
 }: {
   planId: string;
   planTitle: string;
+  children: ReactNode;
 }) {
   const [isPending, startTransition] = useTransition();
 
-  function handleDelete() {
+  function handleDelete(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
     if (!confirm(`Delete "${planTitle}"? This can't be undone.`)) return;
     startTransition(async () => {
       await deletePlan(planId);
@@ -20,12 +24,11 @@ export function DeletePlanButton({
   }
 
   return (
-    <button
+    <span
       onClick={handleDelete}
-      disabled={isPending}
-      className="text-xs text-red-400 hover:text-red-600 cursor-pointer whitespace-nowrap"
+      className={isPending ? "opacity-50 pointer-events-none" : ""}
     >
-      {isPending ? "Deleting..." : "Delete"}
-    </button>
+      {children}
+    </span>
   );
 }
