@@ -4,6 +4,7 @@ import { db } from "@/db/client";
 import { dailyPicks, userInterests, interests, profiles } from "@/db/schema";
 import { and, eq, desc, gte } from "drizzle-orm";
 import { searchEventbrite, type NormalizedEvent } from "./eventbrite";
+import { parseAiJson } from "./parseAiJson";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -138,7 +139,12 @@ export async function generateDailyPick(
     eligibleCandidates.length > 0 ? eligibleCandidates : candidates;
 
   // 5. Ask Gemini to pick the best one and explain why
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash-lite",
+    generationConfig: {
+      responseMimeType: "application/json",
+    },
+  });
 
   const candidateList = finalCandidates
     .slice(0, 8)
@@ -173,15 +179,10 @@ Respond ONLY with valid JSON (no markdown):
 
   const result = await model.generateContent(prompt);
   const text = result.response.text();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error("Could not parse AI pick response");
-  }
-  const cleaned = jsonMatch[0].replace(/,\s*([\]}])/g, "$1");
-  const aiResponse = JSON.parse(cleaned) as {
+  const aiResponse = parseAiJson<{
     pickedIndex: number;
     reason: string;
-  };
+  }>(text);
 
   const picked =
     finalCandidates[aiResponse.pickedIndex] ?? finalCandidates[0];

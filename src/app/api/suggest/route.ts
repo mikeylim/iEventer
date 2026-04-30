@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionProfile, summarizeProfile } from "@/lib/session";
+import { parseAiJson } from "@/lib/parseAiJson";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -15,7 +16,12 @@ export async function POST(req: NextRequest) {
       ? `\n\nUser profile: ${summarizeProfile(sessionProfile)}. Weight suggestions toward these interests when relevant, but still vary the ideas.`
       : "";
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash-lite",
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+    });
 
     const excludeNote = exclude && exclude.length > 0
       ? `\n\nIMPORTANT: Do NOT suggest any of these activities (already suggested): ${exclude.join(", ")}. Come up with completely different ideas.`
@@ -60,21 +66,7 @@ Make the steps actionable and specific — tell them HOW to do it, not just what
     ]);
 
     const text = result.response.text();
-
-    // Extract JSON from the response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return NextResponse.json(
-        { error: "Failed to parse AI response" },
-        { status: 500 }
-      );
-    }
-
-    // Clean up common Gemini JSON issues: trailing commas before ] or }
-    const cleaned = jsonMatch[0]
-      .replace(/,\s*([\]}])/g, "$1");
-
-    const data = JSON.parse(cleaned);
+    const data = parseAiJson(text);
     return NextResponse.json(data);
   } catch (error) {
     console.error("Gemini API error:", error);

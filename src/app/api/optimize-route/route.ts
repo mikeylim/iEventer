@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionProfile, summarizeProfile } from "@/lib/session";
+import { parseAiJson } from "@/lib/parseAiJson";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -20,7 +21,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash-lite",
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+    });
 
     const systemPrompt = `You are a smart trip/day planner. The user has selected multiple events and activities they want to do.
 Your job is to figure out the best ORDER to attend them, considering:
@@ -93,16 +99,7 @@ Please optimize the best route/order for me to attend these.`;
     ]);
 
     const text = result.response.text();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return NextResponse.json(
-        { error: "Failed to parse route plan" },
-        { status: 500 }
-      );
-    }
-
-    const cleaned = jsonMatch[0].replace(/,\s*([\]}])/g, "$1");
-    const data = JSON.parse(cleaned);
+    const data = parseAiJson(text);
     return NextResponse.json(data);
   } catch (error) {
     console.error("Route optimizer error:", error);
