@@ -108,19 +108,10 @@ src/
 └── proxy.ts              # Edge middleware (route protection)
 ```
 
-## Roadmap
+## Project history & next steps
 
-- [x] Core AI suggestions + Eventbrite integration
-- [x] Multi-event planning + route optimizer
-- [x] User auth + profile onboarding
-- [ ] Lu.ma + Ticketmaster integration
-- [ ] "Surprise me today" daily pick
-- [ ] Social plan sharing
-- [ ] Map view (Mapbox)
-- [ ] Weekly email digest (Resend)
-- [ ] Hobby explorer
-- [ ] E2E tests (Playwright) + CI pipeline
-- [ ] Cloudflare Pages deployment
+- 📜 [**CHANGELOG.md**](./CHANGELOG.md) — every phase shipped, dated and detailed
+- 🗺️ [**ROADMAP.md**](./ROADMAP.md) — what's next, deferred features, and the idea backlog
 
 ## License
 
