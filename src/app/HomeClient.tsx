@@ -365,7 +365,7 @@ export default function HomeClient({
       try {
         const params = new URLSearchParams({ q: keyword, page_size: "10" });
         if (location) params.set("location", location);
-        const res = await fetch(`/api/events?${params.toString()}`);
+        const res = await fetch(`/api/discover?${params.toString()}`);
         const data = await res.json();
         setEvents(data.events || []);
         setEventsContinuation(data.continuation || null);
@@ -394,7 +394,7 @@ export default function HomeClient({
         continuation: eventsContinuation,
       });
       if (location) params.set("location", location);
-      const res = await fetch(`/api/events?${params.toString()}`);
+      const res = await fetch(`/api/discover?${params.toString()}`);
       const data = await res.json();
       setEvents((prev) => [...prev, ...(data.events || [])]);
       setEventsContinuation(data.continuation || null);
