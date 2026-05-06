@@ -43,6 +43,10 @@ design-ref/
 # vercel
 .vercel
 
+# Cloudflare / OpenNext build artifacts
+.open-next/
+.wrangler/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

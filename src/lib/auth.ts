@@ -1,5 +1,4 @@
 import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/db/client";
 import {
@@ -8,30 +7,19 @@ import {
   sessions,
   verificationTokens,
 } from "@/db/schema";
+import { authConfig } from "./auth.config";
 
+/**
+ * Full server-side auth — adds the Drizzle adapter so OAuth account / user
+ * creation persists to Postgres. Used by API routes, server actions, and
+ * server components. Edge middleware uses `auth.config.ts` instead.
+ */
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   adapter: DrizzleAdapter(db, {
     usersTable: users,
     accountsTable: accounts,
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
-  session: { strategy: "database" },
-  providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    }),
-  ],
-  pages: {
-    signIn: "/auth/signin",
-  },
-  callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id;
-      }
-      return session;
-    },
-  },
 });

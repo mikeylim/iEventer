@@ -105,7 +105,7 @@ src/
 ├── lib/
 │   ├── auth.ts           # NextAuth v5 config
 │   └── interests.ts      # Interest categories + seed list
-└── proxy.ts              # Edge middleware (route protection)
+└── lib/auth.config.ts    # Edge-safe Auth.js config (JWT session)
 ```
 
 ## Project history & next steps

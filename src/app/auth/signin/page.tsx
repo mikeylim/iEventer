@@ -1,7 +1,12 @@
-import { signIn } from "@/lib/auth";
+import { signIn, auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
-export default function SignInPage() {
+export default async function SignInPage() {
+  // If already signed in, send to home (proxy.ts used to handle this).
+  const session = await auth();
+  if (session?.user) redirect("/");
+
   return (
     <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decoration */}

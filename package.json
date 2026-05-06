@@ -7,6 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare deploy",
+    "cf:upload": "opennextjs-cloudflare upload",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
@@ -39,6 +43,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.19.5",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.20.0",
@@ -49,6 +54,7 @@
     "eslint-config-next": "16.2.3",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.87.0"
   }
 }

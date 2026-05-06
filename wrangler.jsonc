@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ieventer",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": [
+    // Required so postgres-js (TCP) and other Node-API consumers run on Workers.
+    "nodejs_compat"
+  ],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".open-next/assets"
+  },
+  "observability": {
+    "enabled": true
+  }
+  // Daily-pick cron will be added in a follow-up — needs a scheduled() handler
+  // that calls our /api/cron/daily-picks route. Until then, picks generate
+  // lazily when a signed-in user visits the home page.
+}
