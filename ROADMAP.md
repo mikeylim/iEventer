@@ -4,35 +4,34 @@ What's next for iEventer, ordered by portfolio impact. See [CHANGELOG.md](./CHAN
 
 ---
 
-## 🚀 Next: Phase 5 — Cloudflare Pages Deploy
+## ✅ Phase 5 — Cloudflare Workers Deploy (DONE 2026-05-05)
 
-**Goal:** Get a live URL on the resume. Single biggest portfolio multiplier.
+Live at [ieventer.mikedohyunlim.workers.dev](https://ieventer.mikedohyunlim.workers.dev). See [CHANGELOG.md](./CHANGELOG.md) for the full write-up.
 
-**Tasks:**
-- [ ] Create Cloudflare Pages project, connect GitHub repo
-- [ ] Configure `@opennextjs/cloudflare` adapter
-- [ ] Add prod env vars in Cloudflare dashboard (`DATABASE_URL`, `AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GEMINI_API_KEY`, `EVENTBRITE_API_KEY`, `CRON_SECRET`)
-- [ ] Add prod redirect URI to Google OAuth (`https://<prod-domain>/api/auth/callback/google`)
-- [ ] Update `NEXTAUTH_URL` for prod
-- [ ] Wire up Cloudflare Cron Trigger to hit `/api/cron/daily-picks` daily
-- [ ] Smoke-test the live deployment (sign in, onboarding, daily pick, plan flow)
+**Still on the followup list:**
+- [ ] Wire up Cloudflare Cron Trigger to call `/api/cron/daily-picks` daily (currently lazy-only — fires when a signed-in user visits home)
 - [ ] Optional: custom domain ($10/yr)
-
-**Estimated:** ~half day
+- [ ] Smoke-test on a fresh browser/device + production flows
 
 ---
 
-## 📚 Phase 6 — README polish + portfolio assets
+## 🚀 Next: Phase 6 — README polish + portfolio assets
 
-**Goal:** Make the GitHub repo presentation-ready for recruiters.
+**Goal:** Make the GitHub repo presentation-ready for recruiters. Live URL is up; now make the project visible at a glance.
 
 **Tasks:**
-- [ ] Add screenshots of: Home with daily pick, Onboarding, /plans, Plan detail (light + dark)
-- [ ] Record a 30-second demo GIF showing the golden path (sign in → daily pick → search → plan → optimize)
-- [ ] Update tech-stack section in README to reflect post-redesign state
-- [ ] Add architecture diagram (auth flow + DB schema overview)
-- [ ] Pin live demo link at the top
-- [ ] Add badges: build status (after CI), license, tech stack
+- [x] Live demo link pinned at the top
+- [x] Update tech-stack section to reflect post-redesign state
+- [x] Architecture diagram (Mermaid; renders on GitHub natively)
+- [x] Project structure + design philosophy sections
+- [ ] Capture screenshots into `docs/screenshots/` (see that folder's README for spec)
+  - [ ] `home-light.png`
+  - [ ] `home-dark.png`
+  - [ ] `onboarding.png`
+  - [ ] `plan-detail.png`
+  - [ ] `signin.png`
+- [ ] Record `golden-path.gif` (30 sec, ≤ 8 MB) — sign in → daily pick → search → add to plan → optimize route
+- [ ] Add build-status badge (after Phase 8 CI is in place)
 
 **Estimated:** ~1 hour
 

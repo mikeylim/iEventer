@@ -5,6 +5,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Phase 5 — Cloudflare Workers Deploy] — 2026-05-05
+
+### Added
+- 🌐 **Live deployment:** [ieventer.mikedohyunlim.workers.dev](https://ieventer.mikedohyunlim.workers.dev)
+- `@opennextjs/cloudflare` adapter + `wrangler` dev dependency
+- `wrangler.jsonc` Workers config with `nodejs_compat` flag (required for postgres-js TCP)
+- `open-next.config.ts` adapter config
+- `cf:build`, `cf:preview`, `cf:deploy`, `cf:upload` package scripts
+- `src/lib/auth.config.ts` — edge-safe Auth.js config used by middleware-equivalent paths
+- `docs/DEPLOY.md` — full Cloudflare deploy walkthrough with secrets, OAuth setup, troubleshooting
+
+### Changed
+- **Auth session strategy: `database` → `jwt`.** Database sessions can't be validated on edge runtime without per-request Postgres lookups. Auth.js v5 still uses the Drizzle adapter for OAuth user/account persistence on first sign-in; sessions themselves are now stateless JWT cookies.
+- Split Auth.js config into `auth.config.ts` (edge-safe, no DB) + `auth.ts` (full, with Drizzle adapter) per the official Auth.js v5 pattern
+- `jwt` and `session` callbacks now propagate `user.id` so server actions and components keep getting `session.user.id`
+- `.gitignore` excludes `.open-next/` and `.wrangler/` build artifacts
+
+### Removed
+- `src/proxy.ts` — Next.js 16 forces middleware to Node.js runtime, but OpenNext for Cloudflare doesn't support Node middleware on Workers. Auth gating that the proxy handled is now per-page in server components (which we already had everywhere). Sign-in page's "redirect signed-in users away" check moved to the page itself.
+
+### Fixed
+- `/api/events` was getting blocked by ad blockers (uBlock, Brave Shields) in production with `ERR_BLOCKED_BY_CLIENT` — the path matched generic analytics-endpoint filter rules. **Renamed to `/api/discover`**. Localhost was unaffected because most blockers exempt it from filtering.
+
+---
+
 ## [Phase 4 — UI Redesign + Reliability] — 2026-04-30
 
 ### Added
