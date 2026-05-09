@@ -452,7 +452,7 @@ export default function HomeClient({
             value={mode}
             onValueChange={(v) => setMode(v as "type" | "pick")}
           >
-            <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
+            <TabsList className="grid w-full max-w-md grid-cols-2 mb-4 mx-auto">
               <TabsTrigger value="type">✍️ Type It</TabsTrigger>
               <TabsTrigger value="pick">🎯 Pick Options</TabsTrigger>
             </TabsList>
