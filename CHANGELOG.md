@@ -5,6 +5,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Phase 8 — Tests + CI] — 2026-05-09
+
+### Added
+- **Vitest** + React Testing Library + jsdom — 34 unit/component tests across 5 files
+  - `parseAiJson` — code fences, trailing commas, preamble/trailing chatter, hard parse failures
+  - `formatEventDate` — empty inputs, unparseable strings pass through, valid ISO formatting
+  - `eventFilters` (`filterByWhen` / `filterByPrice` / `filterByCategory`) — pinned-time tests for today/tomorrow/weekend/week
+  - `EventCard` — title/venue/category rendering, FREE vs Paid badge, URL link, Add to Plan callback, in-plan disabled state
+  - `AISuggestionCard` — title/emoji/description, four detail chips, collapsed-by-default steps, expand interaction, Find Events callback fires with the right keyword
+- **Playwright** — anonymous home page smoke tests: hero copy renders, sign-in CTA visible, submit button disabled without input, enabled after typing
+- **GitHub Actions CI** — lint → typecheck → vitest → build runs on every push/PR to main; Playwright runs on PRs only with report upload as artifact
+- **CI badge** in README pointing at the Actions workflow
+
+### Changed
+- **Extracted shared helpers** for testability:
+  - `formatEventDate` from 5 inline copies → `src/lib/format.ts`
+  - Event filters + WHEN/PRICE constants + types from `HomeClient.tsx` → `src/lib/eventFilters.ts` (with injectable `now` for deterministic time-based tests)
+- ESLint config now ignores `design-ref/`, `.open-next/`, `.wrangler/`, `playwright-report/`, `test-results/`
+
+---
+
 ## [Phase 5 — Cloudflare Workers Deploy] — 2026-05-05
 
 ### Added

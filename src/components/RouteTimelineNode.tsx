@@ -2,6 +2,7 @@
 
 import { ArrowRight, Clock, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatEventDate } from "@/lib/format";
 
 export interface RouteStop {
   order: number;
@@ -10,19 +11,6 @@ export interface RouteStop {
   time: string;
   travelTip: string;
   reason: string;
-}
-
-function formatEventDate(input: string): string {
-  if (!input) return "";
-  const d = new Date(input);
-  if (isNaN(d.getTime())) return input;
-  return d.toLocaleString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }
 
 export function RouteTimelineNode({

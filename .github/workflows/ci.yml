@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Lint · Type-check · Test · Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Unit tests (Vitest)
+        run: npm run test:run
+
+      - name: Build (Next.js production)
+        run: npm run build
+        env:
+          # Build collects route data; supply a placeholder so postgres client
+          # doesn't try to connect during static analysis. No queries actually run.
+          DATABASE_URL: postgres://placeholder:placeholder@localhost:5432/placeholder
+          AUTH_SECRET: ci-placeholder-secret-for-build-only
+          GOOGLE_CLIENT_ID: placeholder
+          GOOGLE_CLIENT_SECRET: placeholder
+          GEMINI_API_KEY: placeholder
+          EVENTBRITE_API_KEY: placeholder
+
+  e2e:
+    name: E2E smoke (Playwright)
+    runs-on: ubuntu-latest
+    # Only run on PRs to keep main-branch pushes fast. Toggle if needed.
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        env:
+          DATABASE_URL: postgres://placeholder:placeholder@localhost:5432/placeholder
+          AUTH_SECRET: ci-placeholder-secret-for-build-only
+          GOOGLE_CLIENT_ID: placeholder
+          GOOGLE_CLIENT_SECRET: placeholder
+          GEMINI_API_KEY: placeholder
+          EVENTBRITE_API_KEY: placeholder
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

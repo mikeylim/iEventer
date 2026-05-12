@@ -3,6 +3,7 @@
 import { Calendar, MapPin, Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { formatEventDate } from "@/lib/format";
 
 export interface EventItem {
   id: string;
@@ -15,19 +16,6 @@ export interface EventItem {
   isFree: boolean;
   logo: string | null;
   planEventId?: string;
-}
-
-function formatEventDate(input: string): string {
-  if (!input) return "";
-  const d = new Date(input);
-  if (isNaN(d.getTime())) return input;
-  return d.toLocaleString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }
 
 export function EventCard({

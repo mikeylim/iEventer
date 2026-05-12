@@ -26,6 +26,7 @@ import {
   type RouteStop,
 } from "@/components/RouteTimelineNode";
 import { cn } from "@/lib/utils";
+import { formatEventDate } from "@/lib/format";
 
 // ─── Option Data ──────────────────────────────────────────────
 const MOODS = ["😊 Happy", "😴 Bored", "😰 Stressed", "🥳 Adventurous", "😌 Chill", "🤔 Curious"];
@@ -42,22 +43,15 @@ const VIBES = [
   "🌿 Nature",
 ];
 
-const WHEN_FILTERS = [
-  { value: "all", label: "Any Time" },
-  { value: "today", label: "Today" },
-  { value: "tomorrow", label: "Tomorrow" },
-  { value: "this_weekend", label: "Weekend" },
-  { value: "this_week", label: "This Week" },
-] as const;
-
-const PRICE_FILTERS = [
-  { value: "all", label: "Any Price" },
-  { value: "free", label: "Free" },
-  { value: "paid", label: "Paid" },
-] as const;
-
-type WhenFilter = (typeof WHEN_FILTERS)[number]["value"];
-type PriceFilter = (typeof PRICE_FILTERS)[number]["value"];
+import {
+  WHEN_FILTERS,
+  PRICE_FILTERS,
+  type WhenFilter,
+  type PriceFilter,
+  filterByWhen,
+  filterByPrice,
+  filterByCategory,
+} from "@/lib/eventFilters";
 
 // ─── Types ────────────────────────────────────────────────────
 interface RoutePlan {
@@ -86,55 +80,6 @@ export interface HomeClientProps {
   initialPlan: EventItem[];
   initialRoutePlan: RoutePlan | null;
   dailyPick: SerializedDailyPick | null;
-}
-
-// ─── Filter helpers ──────────────────────────────────────────
-function filterByWhen(events: EventItem[], when: WhenFilter): EventItem[] {
-  if (when === "all") return events;
-  const now = new Date();
-  const todayStr = now.toISOString().split("T")[0];
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split("T")[0];
-  const dayOfWeek = now.getDay();
-  const daysToSat = (6 - dayOfWeek + 7) % 7 || 7;
-  const saturday = new Date(now);
-  saturday.setDate(now.getDate() + (dayOfWeek === 6 ? 0 : daysToSat));
-  const satStr = saturday.toISOString().split("T")[0];
-  const sunday = new Date(saturday);
-  sunday.setDate(saturday.getDate() + 1);
-  const sunStr = sunday.toISOString().split("T")[0];
-  const endOfWeek = new Date(now);
-  endOfWeek.setDate(now.getDate() + (7 - dayOfWeek));
-  const endOfWeekStr = endOfWeek.toISOString().split("T")[0];
-
-  return events.filter((e) => {
-    if (!e.start) return false;
-    const eventDate = e.start.split("T")[0];
-    switch (when) {
-      case "today":
-        return eventDate === todayStr;
-      case "tomorrow":
-        return eventDate === tomorrowStr;
-      case "this_weekend":
-        return eventDate === satStr || eventDate === sunStr;
-      case "this_week":
-        return eventDate >= todayStr && eventDate <= endOfWeekStr;
-      default:
-        return true;
-    }
-  });
-}
-
-function filterByPrice(events: EventItem[], price: PriceFilter): EventItem[] {
-  if (price === "all") return events;
-  if (price === "free") return events.filter((e) => e.isFree);
-  return events.filter((e) => !e.isFree);
-}
-
-function filterByCategory(events: EventItem[], category: string): EventItem[] {
-  if (!category) return events;
-  return events.filter((e) => e.category === category);
 }
 
 // ─── Pill Selector ───────────────────────────────────────────
@@ -843,20 +788,6 @@ export default function HomeClient({
       )}
     </main>
   );
-}
-
-// Local helper used only in the inline plan list above
-function formatEventDate(input: string): string {
-  if (!input) return "";
-  const d = new Date(input);
-  if (isNaN(d.getTime())) return input;
-  return d.toLocaleString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }
 
 // Suppress unused import warning during dev — `cn` may be used in future variants.

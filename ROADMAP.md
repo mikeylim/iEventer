@@ -15,7 +15,7 @@ Live at [ieventer.mikedohyunlim.workers.dev](https://ieventer.mikedohyunlim.work
 
 ---
 
-## 🚀 Next: Phase 6 — README polish + portfolio assets
+## 📸 Phase 6 — README polish + portfolio assets (in progress — pending screenshots)
 
 **Goal:** Make the GitHub repo presentation-ready for recruiters. Live URL is up; now make the project visible at a glance.
 
@@ -37,7 +37,7 @@ Live at [ieventer.mikedohyunlim.workers.dev](https://ieventer.mikedohyunlim.work
 
 ---
 
-## 🌐 Phase 7 — Multi-source Event Aggregation (Option C)
+## 🚀 Next: Phase 7 — Multi-source Event Aggregation (Option C)
 
 **Goal:** Live up to the value prop ("aggregate events from multiple sources").
 
@@ -53,18 +53,21 @@ Live at [ieventer.mikedohyunlim.workers.dev](https://ieventer.mikedohyunlim.work
 
 ---
 
-## 🧪 Phase 8 — Tests + CI
+## ✅ Phase 8 — Tests + CI (DONE 2026-05-09)
 
-**Goal:** Engineering signal for recruiters — most junior portfolios have zero tests.
+34 unit/component tests passing across 5 files, Playwright smoke tests covering anonymous home, GitHub Actions CI runs lint → typecheck → tests → build on every push and PR. See [CHANGELOG.md](./CHANGELOG.md) for the full write-up.
 
-**Tasks:**
-- [ ] **Vitest** + React Testing Library on key components: `EventCard`, `AISuggestionCard`, `DailyPickCard`
-- [ ] Unit tests for `parseAiJson`, `formatEventDate`, plan filter helpers
-- [ ] **Playwright** smoke test for the golden path (sign in → onboarding → search → add to plan → optimize)
-- [ ] **GitHub Actions** workflow: lint → type-check → test on every PR
-- [ ] Status badge in README
+**Tasks shipped:**
+- [x] Vitest + React Testing Library + jsdom configured
+- [x] Unit tests: `parseAiJson`, `formatEventDate`, event filters (with injectable `now`)
+- [x] Component tests: `EventCard`, `AISuggestionCard`
+- [x] Playwright smoke tests covering anonymous home (hero, sign-in CTA, submit-button enabling)
+- [x] GitHub Actions workflow (`.github/workflows/ci.yml`)
+- [x] CI badge in README
 
-**Estimated:** ~1 day
+**Not shipped (deliberately):**
+- DailyPickCard tests — depends on server actions; would require non-trivial mocking
+- Full golden-path Playwright (sign in → onboarding → ...) — needs auth + DB mocking; manual QA covers this for now
 
 ---
 

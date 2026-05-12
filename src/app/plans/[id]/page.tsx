@@ -13,21 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MakeCurrentButton } from "./MakeCurrentButton";
 import { PlanDescriptionForm } from "./PlanDescriptionForm";
+import { formatEventDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-
-function formatEventDate(input: string): string {
-  if (!input) return "";
-  const d = new Date(input);
-  if (isNaN(d.getTime())) return input;
-  return d.toLocaleString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
 
 export default async function PlanDetailPage({
   params,

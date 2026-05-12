@@ -10,6 +10,7 @@ import {
 import { addEventToPlan } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { formatEventDate } from "@/lib/format";
 
 type Event = {
   id: string;
@@ -30,19 +31,6 @@ type Pick = {
   seenAt: string | null;
   dismissedAt: string | null;
 };
-
-function formatEventDate(input: string): string {
-  if (!input) return "";
-  const d = new Date(input);
-  if (isNaN(d.getTime())) return input;
-  return d.toLocaleString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
 
 export function DailyPickCard({
   initialPick,
