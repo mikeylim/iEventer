@@ -114,9 +114,11 @@ jobs:
           GEMINI_API_KEY: placeholder
           EVENTBRITE_API_KEY: placeholder
 
-      - name: Deploy with Wrangler
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+      - name: Deploy to Cloudflare Workers
+        # Use our local Wrangler 4 (from package.json) instead of wrangler-action,
+        # which insists on installing its own outdated Wrangler 3.x that doesn't
+        # understand wrangler.jsonc + OpenNext output.
+        run: npm run cf:deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
