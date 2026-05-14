@@ -66,11 +66,37 @@ After the first deploy, set `NEXTAUTH_URL` and `AUTH_URL` to the actual deployed
 
 ## Subsequent deploys
 
+After the initial manual deploy, every push to `main` deploys automatically via GitHub Actions (`.github/workflows/ci.yml`, `deploy` job). Manual fallback if you ever need it:
+
 ```bash
 npm run cf:build && npm run cf:deploy
 ```
 
-Or set up a GitHub Actions workflow to run on every push to `main` (see [Phase 8 in ROADMAP.md](../ROADMAP.md)).
+## Auto-deploy from GitHub Actions
+
+The `deploy` job in `.github/workflows/ci.yml` runs after `verify` passes on every push to `main`. It needs two GitHub repository secrets:
+
+### 1. Get a Cloudflare API token
+
+1. Go to https://dash.cloudflare.com/profile/api-tokens
+2. Click **Create Token**
+3. Use the **Edit Cloudflare Workers** template (includes Account: Workers Scripts: Edit + User Details: Read)
+4. Account Resources: include only your account (not "All accounts")
+5. Zone Resources: leave as-is (or restrict if you have a custom domain)
+6. Create and **copy the token** — it's shown once
+
+### 2. Find your Cloudflare Account ID
+
+In the Cloudflare dashboard, click any of your Workers/Pages projects, scroll to the right sidebar — **Account ID** is shown there (and on the account home page).
+
+### 3. Add the secrets to GitHub
+
+1. Go to https://github.com/mikeylim/iEventer/settings/secrets/actions
+2. Click **New repository secret** and add:
+   - `CLOUDFLARE_API_TOKEN` — paste the token from step 1
+   - `CLOUDFLARE_ACCOUNT_ID` — paste the Account ID from step 2
+
+After these are set, the next push to `main` will trigger an automatic deploy. Check progress at https://github.com/mikeylim/iEventer/actions.
 
 ## Local preview against the production bundle
 

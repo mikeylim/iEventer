@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Phase 8.5 — Auto-deploy on push to main] — 2026-05-09
+
+### Added
+- `deploy` job in `.github/workflows/ci.yml` that runs after `verify` passes. Triggers on push to `main` only (skipped for PRs and forks). Uses `cloudflare/wrangler-action@v3` with `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` repo secrets.
+- Walkthrough in `docs/DEPLOY.md` for getting the API token, finding the Account ID, and registering both as GitHub repository secrets.
+
+### Why
+Manual `npm run cf:deploy` was forgettable — fixes pushed to GitHub would silently fail to appear on the live URL (e.g. the "center tabs" fix shipped to git but not to Cloudflare for several commits). Auto-deploy makes the live site always match `main`.
+
+---
+
 ## [Phase 8 — Tests + CI] — 2026-05-09
 
 ### Added
