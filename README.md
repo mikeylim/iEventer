@@ -23,7 +23,6 @@ An AI-powered event and activity discovery app that learns your interests, mood,
 <!-- Screenshots will render once captured (see docs/screenshots/README.md) -->
 <p align="center">
   <img src="./docs/screenshots/home-light.png" alt="Home with daily surprise pick (light mode)" width="48%" />
-  <img src="./docs/screenshots/home-dark.png" alt="Home with daily surprise pick (dark mode)" width="48%" />
 </p>
 
 ---
