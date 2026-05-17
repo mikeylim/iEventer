@@ -23,7 +23,7 @@ An AI-powered event and activity discovery app that learns your interests, mood,
 <!-- Screenshots will render once captured (see docs/screenshots/README.md) -->
 <p align="center">
   <img src="./docs/screenshots/home-light.png" alt="Home with daily surprise pick (light mode)" width="48%" />
-  <img src="./docs/screenshots/on-boarding.png" alt="Onboarding flow with AI-generated contents" width="48%" />
+  <img src="./docs/screenshots/onboarding.png" alt="Onboarding flow with AI-generated contents" width="48%" />
   <img src="./docs/screenshots/plan-detail.png" alt="A plan detail page with 3+ events showing image thumbs and the travel-time ribbon" width="48%" />
 </p>
 
