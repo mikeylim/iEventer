@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DailyPickCard } from "@/components/DailyPickCard";
+import { SamplePlanPreview } from "@/components/SamplePlanPreview";
 import {
   EventCard,
   type EventItem,
@@ -27,21 +27,6 @@ import {
 } from "@/components/RouteTimelineNode";
 import { cn } from "@/lib/utils";
 import { formatEventDate } from "@/lib/format";
-
-// ─── Option Data ──────────────────────────────────────────────
-const MOODS = ["😊 Happy", "😴 Bored", "😰 Stressed", "🥳 Adventurous", "😌 Chill", "🤔 Curious"];
-const COMPANIONS = ["🙋 Solo", "👫 Partner", "👨‍👩‍👧 Family", "👯 Friends", "🐕 With Pets"];
-const BUDGETS = ["🆓 Free", "💵 Under $20", "💰 Under $50", "💎 Any Budget"];
-const VIBES = [
-  "🏃 Active / Outdoors",
-  "🎨 Creative / Artsy",
-  "🍽️ Food & Drinks",
-  "📚 Learning / Culture",
-  "🎮 Games & Fun",
-  "🎵 Music & Shows",
-  "🧘 Relaxation",
-  "🌿 Nature",
-];
 
 import {
   WHEN_FILTERS,
@@ -82,42 +67,6 @@ export interface HomeClientProps {
   dailyPick: SerializedDailyPick | null;
 }
 
-// ─── Pill Selector ───────────────────────────────────────────
-function PillSelect({
-  label,
-  options,
-  selected,
-  onToggle,
-}: {
-  label: string;
-  options: string[];
-  selected: string[];
-  onToggle: (val: string) => void;
-}) {
-  return (
-    <div>
-      <label className="text-sm font-medium mb-2 block text-muted-foreground">
-        {label}
-      </label>
-      <div className="flex flex-wrap gap-2">
-        {options.map((opt) => {
-          const active = selected.includes(opt);
-          return (
-            <Badge
-              key={opt}
-              variant={active ? "default" : "outline"}
-              className="cursor-pointer hover:bg-primary/10 transition-colors px-3 py-1.5"
-              onClick={() => onToggle(opt)}
-            >
-              {opt}
-            </Badge>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Page ───────────────────────────────────────────────
 export default function HomeClient({
   isSignedIn,
@@ -127,14 +76,8 @@ export default function HomeClient({
   initialRoutePlan,
   dailyPick,
 }: HomeClientProps) {
-  const [mode, setMode] = useState<"type" | "pick">("type");
   const [prompt, setPrompt] = useState("");
   const [location, setLocation] = useState(initialLocation);
-
-  const [moods, setMoods] = useState<string[]>([]);
-  const [companions, setCompanions] = useState<string[]>([]);
-  const [budget, setBudget] = useState<string[]>([]);
-  const [vibes, setVibes] = useState<string[]>([]);
 
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -157,10 +100,6 @@ export default function HomeClient({
   const [routePlan, setRoutePlan] = useState<RoutePlan | null>(initialRoutePlan);
   const [optimizing, setOptimizing] = useState(false);
   const [, startTransition] = useTransition();
-
-  const toggle = (arr: string[], val: string, set: (v: string[]) => void) => {
-    set(arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val]);
-  };
 
   const planIds = new Set(plan.map((e) => e.id));
 
@@ -246,18 +185,9 @@ export default function HomeClient({
     setEvents([]);
     setEventsContinuation(null);
 
-    const body =
-      mode === "type"
-        ? { prompt: `${prompt}${location ? `. I'm in/near ${location}` : ""}` }
-        : {
-            preferences: {
-              mood: moods,
-              companions,
-              budget,
-              vibes,
-              location,
-            },
-          };
+    const body = {
+      prompt: `${prompt}${location ? `. I'm in/near ${location}` : ""}`,
+    };
 
     lastPromptBody.current = body;
 
@@ -350,10 +280,7 @@ export default function HomeClient({
     }
   }
 
-  const canSubmit =
-    mode === "type"
-      ? prompt.trim().length > 0
-      : moods.length > 0 || vibes.length > 0;
+  const canSubmit = prompt.trim().length > 0;
 
   const filteredByWhen = filterByWhen(events, whenFilter);
   const filteredByPrice = filterByPrice(filteredByWhen, priceFilter);
@@ -380,73 +307,54 @@ export default function HomeClient({
 
       {/* Hero (anonymous only — signed-in users see daily pick instead) */}
       {!isSignedIn && (
-        <section className="text-center py-10 max-w-2xl mx-auto space-y-4 animate-fade-in">
-          <h1 className="font-display text-5xl md:text-6xl tracking-tight">
-            Bored?
-          </h1>
-          <p className="text-xl text-muted-foreground">
-            Let AI find your next adventure.
-          </p>
+        <section className="max-w-5xl mx-auto animate-fade-in">
+          <div className="grid md:grid-cols-2 gap-10 items-center">
+            <div className="space-y-4">
+              <h1 className="font-display text-4xl md:text-5xl tracking-tight leading-tight">
+                Plan your perfect outing in seconds.
+              </h1>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                Tell us what you&apos;re in the mood for. We&apos;ll find
+                real events nearby, suggest creative ideas, and build an
+                optimized route — all in one place.
+              </p>
+              <p className="text-sm text-muted-foreground/80">
+                Try it right below — no sign-in needed to start.
+              </p>
+            </div>
+            <SamplePlanPreview />
+          </div>
         </section>
       )}
 
       {/* Discovery input */}
       <section>
-        <div className="bg-card rounded-2xl border border-border p-6 space-y-5 max-w-3xl mx-auto">
-          <Tabs
-            value={mode}
-            onValueChange={(v) => setMode(v as "type" | "pick")}
-          >
-            <TabsList className="grid w-full max-w-md grid-cols-2 mb-4 mx-auto">
-              <TabsTrigger value="type">✍️ Type It</TabsTrigger>
-              <TabsTrigger value="pick">🎯 Pick Options</TabsTrigger>
-            </TabsList>
+        <div className="bg-card rounded-2xl border border-border p-6 space-y-4 max-w-3xl mx-auto">
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              📍 Where are you?
+            </label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Toronto, ON"
+                className="pl-10"
+              />
+            </div>
+          </div>
 
-            <TabsContent value="type" className="space-y-4">
-              <Textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="I'm bored on a Saturday with friends, no money, want something outdoors..."
-                rows={3}
-                className="text-base min-h-[120px] resize-none"
-              />
-            </TabsContent>
-
-            <TabsContent value="pick" className="space-y-5">
-              <PillSelect
-                label="Mood"
-                options={MOODS}
-                selected={moods}
-                onToggle={(v) => toggle(moods, v, setMoods)}
-              />
-              <PillSelect
-                label="Companions"
-                options={COMPANIONS}
-                selected={companions}
-                onToggle={(v) => toggle(companions, v, setCompanions)}
-              />
-              <PillSelect
-                label="Budget"
-                options={BUDGETS}
-                selected={budget}
-                onToggle={(v) => toggle(budget, v, setBudget)}
-              />
-              <PillSelect
-                label="Vibes"
-                options={VIBES}
-                selected={vibes}
-                onToggle={(v) => toggle(vibes, v, setVibes)}
-              />
-            </TabsContent>
-          </Tabs>
-
-          <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Location (e.g., Toronto, ON)"
-              className="pl-10"
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              💭 What are you in the mood for?
+            </label>
+            <Textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="A chill Saturday with friends. Free or cheap. Outdoors preferred."
+              rows={3}
+              className="text-base min-h-[100px] resize-none"
             />
           </div>
 

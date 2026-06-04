@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 const onboardingSchema = z.object({
-  interestSlugs: z.array(z.string()).min(3, "Pick at least 3 interests"),
+  interestSlugs: z.array(z.string()).min(2, "Pick at least 2 interests"),
   location: z.string().min(2),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
