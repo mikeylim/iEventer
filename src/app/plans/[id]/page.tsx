@@ -2,18 +2,11 @@ import { auth } from "@/lib/auth";
 import { getPlanWithEvents } from "@/lib/plans";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import {
-  Calendar,
-  MapPin,
-  ArrowLeft,
-  ArrowRight,
-  Edit,
-} from "lucide-react";
+import { Calendar, ArrowLeft, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { MakeCurrentButton } from "./MakeCurrentButton";
 import { PlanDescriptionForm } from "./PlanDescriptionForm";
-import { formatEventDate } from "@/lib/format";
+import { PlanEventRow } from "./PlanEventRow";
 
 export const dynamic = "force-dynamic";
 
@@ -94,73 +87,18 @@ export default async function PlanDetailPage({
       ) : (
         <div className="space-y-4">
           {events.map((e, index) => (
-            <div key={e.id}>
-              <div className="bg-card rounded-2xl border border-border overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                <div className="flex flex-col sm:flex-row">
-                  {e.imageUrl ? (
-                    <div className="sm:w-48 aspect-[4/3] sm:aspect-auto overflow-hidden shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={e.imageUrl}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="sm:w-48 aspect-[4/3] sm:aspect-auto bg-gradient-to-br from-muted to-accent/30 flex items-center justify-center shrink-0">
-                      <Calendar className="w-10 h-10 text-muted-foreground/40" />
-                    </div>
-                  )}
-                  <div className="flex-1 p-5 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline">{index + 1}</Badge>
-                      {e.startAt && (
-                        <span className="text-sm text-muted-foreground">
-                          {formatEventDate(e.startAt.toISOString())}
-                        </span>
-                      )}
-                      {e.isFree && (
-                        <Badge variant="secondary" className="ml-auto">
-                          FREE
-                        </Badge>
-                      )}
-                    </div>
-                    <h3 className="font-display text-xl">{e.name}</h3>
-                    <div className="space-y-1 text-sm text-muted-foreground">
-                      {e.venueName && (
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 shrink-0" />
-                          <span>
-                            {e.venueName}
-                            {e.venueAddress ? `, ${e.venueAddress}` : ""}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <Button asChild variant="outline" size="sm">
-                      <a
-                        href={e.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        View Event Page
-                        <ArrowRight className="w-4 h-4" />
-                      </a>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Travel time indicator between events */}
-              {index < events.length - 1 && (
-                <div className="flex items-center justify-center py-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-full">
-                    <ArrowRight className="w-4 h-4" />
-                    <span>Travel between</span>
-                  </div>
-                </div>
-              )}
-            </div>
+            <PlanEventRow
+              key={e.id}
+              id={e.id}
+              index={index}
+              name={e.name}
+              url={e.url}
+              startAt={e.startAt ? e.startAt.toISOString() : null}
+              venueName={e.venueName}
+              venueAddress={e.venueAddress}
+              isFree={e.isFree}
+              imageUrl={e.imageUrl}
+            />
           ))}
         </div>
       )}

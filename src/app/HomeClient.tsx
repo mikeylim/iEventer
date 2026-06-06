@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { DailyPickCard } from "@/components/DailyPickCard";
 import { SamplePlanPreview } from "@/components/SamplePlanPreview";
+import { MyPlanFAB } from "@/components/MyPlanFAB";
 import {
   EventCard,
   type EventItem,
@@ -694,6 +695,8 @@ export default function HomeClient({
           )}
         </section>
       )}
+
+      <MyPlanFAB eventCount={plan.length} />
     </main>
   );
 }

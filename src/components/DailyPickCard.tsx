@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { Calendar, MapPin, Sparkles, Shuffle, ThumbsDown, Plus, Check } from "lucide-react";
+import { Calendar, MapPin, Sparkles, Shuffle, Plus, Check } from "lucide-react";
 import {
   regenerateTodaysPick,
   markPickSeen,
-  dismissPick,
 } from "@/app/dailyPickActions";
 import { addEventToPlan } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
@@ -43,7 +42,6 @@ export function DailyPickCard({
   const [added, setAdded] = useState(false);
   const [isRegenerating, startRegen] = useTransition();
   const [isAdding, startAdd] = useTransition();
-  const [isDismissing, startDismiss] = useTransition();
 
   useEffect(() => {
     if (pick && !pick.seenAt) {
@@ -93,18 +91,6 @@ export function DailyPickCard({
         setAdded(false);
       } catch (err) {
         console.error("Failed to regenerate pick:", err);
-      }
-    });
-  }
-
-  function handleDismiss() {
-    if (!pick) return;
-    startDismiss(async () => {
-      try {
-        await dismissPick(pick.id);
-        setPick(null);
-      } catch (err) {
-        console.error("Failed to dismiss pick:", err);
       }
     });
   }
@@ -207,15 +193,6 @@ export function DailyPickCard({
             >
               <Shuffle className="w-4 h-4" />
               {isRegenerating ? "Picking..." : "Try Another"}
-            </Button>
-            <Button
-              size="lg"
-              variant="ghost"
-              onClick={handleDismiss}
-              disabled={isDismissing}
-              aria-label="Not interested"
-            >
-              <ThumbsDown className="w-4 h-4" />
             </Button>
           </div>
         </div>
