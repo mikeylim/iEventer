@@ -21,7 +21,12 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "8dada9905dcf45d98c5c1ed5f2002aed"
+      "id": "8dada9905dcf45d98c5c1ed5f2002aed",
+      // Placeholder satisfies OpenNext's platform-proxy validation during
+      // cf:deploy. Never actually used to connect — production reads the
+      // real connection string from the binding, and local dev (`npm run
+      // dev`) uses DATABASE_URL from .env.local via src/db/client.ts.
+      "localConnectionString": "postgres://placeholder:placeholder@localhost:5432/placeholder"
     }
   ]
   // Daily-pick cron will be added in a follow-up — needs a scheduled() handler
