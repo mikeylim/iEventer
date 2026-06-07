@@ -13,7 +13,17 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  // Cloudflare Hyperdrive pools Postgres connections at Cloudflare's edge
+  // so Workers don't have to keep a TCP socket alive across requests.
+  // Fixes the /plans/[id] hang. Read in src/db/client.ts via
+  // env.HYPERDRIVE.connectionString.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "8dada9905dcf45d98c5c1ed5f2002aed"
+    }
+  ]
   // Daily-pick cron will be added in a follow-up — needs a scheduled() handler
   // that calls our /api/cron/daily-picks route. Until then, picks generate
   // lazily when a signed-in user visits the home page.
