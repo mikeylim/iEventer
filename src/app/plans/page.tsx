@@ -20,7 +20,6 @@ export default async function PlansPage() {
     .select({
       id: plans.id,
       title: plans.title,
-      description: plans.description,
       createdAt: plans.createdAt,
       updatedAt: plans.updatedAt,
       shareSlug: plans.shareSlug,
@@ -74,11 +73,6 @@ export default async function PlansPage() {
             >
               <div className="space-y-2 flex-1">
                 <h3 className="font-display text-xl line-clamp-2">{p.title}</h3>
-                {p.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {p.description}
-                  </p>
-                )}
                 <div className="flex items-center gap-3 text-sm text-muted-foreground pt-1">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-4 h-4" />

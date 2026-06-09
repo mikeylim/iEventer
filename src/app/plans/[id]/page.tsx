@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Calendar, ArrowLeft, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MakeCurrentButton } from "./MakeCurrentButton";
-import { PlanDescriptionForm } from "./PlanDescriptionForm";
 import { PlanEventRow } from "./PlanEventRow";
 
 export const dynamic = "force-dynamic";
@@ -63,11 +62,6 @@ export default async function PlanDetailPage({
           </div>
           <MakeCurrentButton planId={plan.id} />
         </div>
-
-        <PlanDescriptionForm
-          planId={plan.id}
-          initialDescription={plan.description || ""}
-        />
       </div>
 
       {/* Events list */}
