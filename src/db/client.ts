@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import * as schema from "./schema";
 
 /**
@@ -15,8 +16,7 @@ import * as schema from "./schema";
  * PostgresJsDatabase` check at module load. A bare `Proxy({})` fails that
  * check. So we wrap a real "boot" Drizzle instance with the Proxy — the
  * instanceof check sees the real target, and the `get` trap forwards
- * method calls to whichever Drizzle instance is appropriate at the moment
- * (Hyperdrive-backed in prod, the boot instance in dev/build).
+ * method calls to whichever Drizzle instance is appropriate at the moment.
  */
 
 const PLACEHOLDER =
@@ -38,13 +38,12 @@ let cachedConnectionString: string | null = null;
 
 function getRuntimeDb(): typeof bootDb {
   // Try the Cloudflare Hyperdrive binding (only resolves inside a Workers
-  // request context). Synchronous require is fine — @opennextjs/cloudflare
-  // ships a Node-safe entry that just throws if there's no context.
+  // request context). `getCloudflareContext()` throws outside a request,
+  // so the try/catch handles dev / build / seed paths gracefully.
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const cf = require("@opennextjs/cloudflare");
-    const { env } = cf.getCloudflareContext();
-    const hd = env?.HYPERDRIVE as { connectionString?: string } | undefined;
+    const { env } = getCloudflareContext();
+    const hd = (env as unknown as { HYPERDRIVE?: { connectionString?: string } })
+      ?.HYPERDRIVE;
     if (hd?.connectionString) {
       if (
         cachedRuntimeDb &&
