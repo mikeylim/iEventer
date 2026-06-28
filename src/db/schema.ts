@@ -12,8 +12,13 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 
+function withRLS<T extends { enableRLS: () => unknown }>(table: T): T {
+  table.enableRLS();
+  return table;
+}
+
 // ─── NextAuth Tables ────────────────────────────────────────
-export const users = pgTable("user", {
+export const users = withRLS(pgTable("user", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -22,9 +27,9 @@ export const users = pgTable("user", {
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}));
 
-export const accounts = pgTable(
+export const accounts = withRLS(pgTable(
   "account",
   {
     userId: text("userId")
@@ -48,17 +53,17 @@ export const accounts = pgTable(
       }),
     },
   ]
-);
+));
 
-export const sessions = pgTable("session", {
+export const sessions = withRLS(pgTable("session", {
   sessionToken: text("sessionToken").primaryKey(),
   userId: text("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   expires: timestamp("expires", { mode: "date" }).notNull(),
-});
+}));
 
-export const verificationTokens = pgTable(
+export const verificationTokens = withRLS(pgTable(
   "verificationToken",
   {
     identifier: text("identifier").notNull(),
@@ -70,7 +75,7 @@ export const verificationTokens = pgTable(
       compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
     },
   ]
-);
+));
 
 // ─── App Tables ─────────────────────────────────────────────
 
@@ -90,17 +95,17 @@ export const interestCategoryEnum = pgEnum("interest_category", [
   "culture",
 ]);
 
-export const interests = pgTable("interest", {
+export const interests = withRLS(pgTable("interest", {
   id: uuid("id").primaryKey().defaultRandom(),
   slug: text("slug").unique().notNull(), // e.g. "tech-meetups"
   name: text("name").notNull(), // e.g. "Tech Meetups"
   emoji: text("emoji").notNull(),
   category: interestCategoryEnum("category").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}));
 
 // User profile extends the base user table
-export const profiles = pgTable("profile", {
+export const profiles = withRLS(pgTable("profile", {
   userId: text("userId")
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
@@ -111,10 +116,10 @@ export const profiles = pgTable("profile", {
   defaultRadiusKm: integer("defaultRadiusKm").default(25).notNull(),
   onboardedAt: timestamp("onboardedAt"), // null until they finish onboarding
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-});
+}));
 
 // Many-to-many: users ↔ interests
-export const userInterests = pgTable(
+export const userInterests = withRLS(pgTable(
   "user_interest",
   {
     userId: text("userId")
@@ -130,10 +135,10 @@ export const userInterests = pgTable(
       compoundKey: primaryKey({ columns: [ui.userId, ui.interestId] }),
     },
   ]
-);
+));
 
 // Saved plans (renamed from "plan" in client state — persisted now)
-export const plans = pgTable("plan", {
+export const plans = withRLS(pgTable("plan", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("userId")
     .notNull()
@@ -145,9 +150,9 @@ export const plans = pgTable("plan", {
   optimizedRoute: jsonb("optimizedRoute"), // cached Gemini output
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-});
+}));
 
-export const planEvents = pgTable("plan_event", {
+export const planEvents = withRLS(pgTable("plan_event", {
   id: uuid("id").primaryKey().defaultRandom(),
   planId: uuid("planId")
     .notNull()
@@ -168,10 +173,10 @@ export const planEvents = pgTable("plan_event", {
   imageUrl: text("imageUrl"),
   orderIdx: integer("orderIdx").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}));
 
 // Journal — "did you go?" entries
-export const journalEntries = pgTable("journal_entry", {
+export const journalEntries = withRLS(pgTable("journal_entry", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("userId")
     .notNull()
@@ -183,10 +188,10 @@ export const journalEntries = pgTable("journal_entry", {
   rating: integer("rating"), // 1-5
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}));
 
 // Daily surprise picks — one per user per day
-export const dailyPicks = pgTable(
+export const dailyPicks = withRLS(pgTable(
   "daily_pick",
   {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -205,4 +210,4 @@ export const dailyPicks = pgTable(
   (t) => [
     uniqueIndex("daily_pick_user_date_uniq").on(t.userId, t.pickDate),
   ]
-);
+));
