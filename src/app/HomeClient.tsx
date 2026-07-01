@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useCallback, useRef, useTransition } from "react";
-import { Sparkles, MapPin, X, Map as MapIcon, Loader2, Filter } from "lucide-react";
+import {
+  Sparkles,
+  MapPin,
+  X,
+  Map as MapIcon,
+  Loader2,
+  Filter,
+  SlidersHorizontal,
+  RotateCcw,
+} from "lucide-react";
 import {
   addEventToPlan,
   removeEventFromPlan,
@@ -11,6 +20,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { DailyPickCard } from "@/components/DailyPickCard";
 import { SamplePlanPreview } from "@/components/SamplePlanPreview";
 import { MyPlanFAB } from "@/components/MyPlanFAB";
@@ -38,6 +53,75 @@ import {
   filterByPrice,
   filterByCategory,
 } from "@/lib/eventFilters";
+
+const PREFERENCE_GROUPS = [
+  {
+    key: "mood",
+    label: "Mood",
+    options: [
+      { emoji: "🌿", label: "Chill" },
+      { emoji: "🗣️", label: "Social" },
+      { emoji: "🔎", label: "Curious" },
+      { emoji: "🎨", label: "Creative" },
+      { emoji: "⚡", label: "Active" },
+      { emoji: "🌙", label: "Romantic" },
+    ],
+  },
+  {
+    key: "company",
+    label: "Company",
+    options: [
+      { emoji: "🧘", label: "Solo" },
+      { emoji: "👯", label: "Friends" },
+      { emoji: "💫", label: "Date" },
+      { emoji: "🏡", label: "Family" },
+    ],
+  },
+  {
+    key: "budget",
+    label: "Budget",
+    options: [
+      { emoji: "🆓", label: "Free" },
+      { emoji: "💵", label: "Cheap" },
+      { emoji: "↔️", label: "Flexible" },
+      { emoji: "✨", label: "Treat yourself" },
+    ],
+  },
+  {
+    key: "setting",
+    label: "Setting",
+    options: [
+      { emoji: "🏛️", label: "Indoor" },
+      { emoji: "🌳", label: "Outdoor" },
+      { emoji: "🍜", label: "Food & drink" },
+      { emoji: "🎷", label: "Live music" },
+      { emoji: "📚", label: "Learning" },
+      { emoji: "💻", label: "Tech" },
+    ],
+  },
+  {
+    key: "timing",
+    label: "Timing",
+    options: [
+      { emoji: "📍", label: "Today" },
+      { emoji: "⏭️", label: "Tomorrow" },
+      { emoji: "🎈", label: "Weekend" },
+      { emoji: "🌆", label: "Evening" },
+      { emoji: "🕰️", label: "Anytime" },
+    ],
+  },
+] as const;
+
+type DiscoveryMode = "prompt" | "vibes";
+type PreferenceKey = (typeof PREFERENCE_GROUPS)[number]["key"];
+type SelectedPreferences = Record<PreferenceKey, string[]>;
+
+function createEmptyPreferences(): SelectedPreferences {
+  return PREFERENCE_GROUPS.reduce((acc, group) => {
+    acc[group.key] = [];
+    return acc;
+  }, {} as SelectedPreferences);
+}
 
 // ─── Types ────────────────────────────────────────────────────
 interface RoutePlan {
@@ -79,6 +163,10 @@ export default function HomeClient({
 }: HomeClientProps) {
   const [prompt, setPrompt] = useState("");
   const [location, setLocation] = useState(initialLocation);
+  const [discoveryMode, setDiscoveryMode] =
+    useState<DiscoveryMode>("prompt");
+  const [selectedPreferences, setSelectedPreferences] =
+    useState<SelectedPreferences>(() => createEmptyPreferences());
 
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -103,6 +191,36 @@ export default function HomeClient({
   const [, startTransition] = useTransition();
 
   const planIds = new Set(plan.map((e) => e.id));
+  const selectedPreferenceCount = PREFERENCE_GROUPS.reduce(
+    (count, group) => count + selectedPreferences[group.key].length,
+    0
+  );
+  const hasSelectedPreferences = selectedPreferenceCount > 0;
+
+  function togglePreference(groupKey: PreferenceKey, option: string) {
+    setSelectedPreferences((prev) => {
+      const current = prev[groupKey];
+      const next = current.includes(option)
+        ? current.filter((item) => item !== option)
+        : [...current, option];
+
+      return {
+        ...prev,
+        [groupKey]: next,
+      };
+    });
+  }
+
+  function buildPreferencesBody() {
+    return PREFERENCE_GROUPS.reduce<Record<string, string | string[]>>(
+      (acc, group) => {
+        const values = selectedPreferences[group.key];
+        if (values.length > 0) acc[group.key] = values;
+        return acc;
+      },
+      location.trim() ? { location: location.trim() } : {}
+    );
+  }
 
   function addToPlan(e: EventItem) {
     if (planIds.has(e.id)) return;
@@ -186,9 +304,16 @@ export default function HomeClient({
     setEvents([]);
     setEventsContinuation(null);
 
-    const body = {
-      prompt: `${prompt}${location ? `. I'm in/near ${location}` : ""}`,
-    };
+    const body: Record<string, unknown> = {};
+    const trimmedPrompt = prompt.trim();
+    const preferences = buildPreferencesBody();
+
+    if (discoveryMode === "prompt" && trimmedPrompt) {
+      body.prompt = `${trimmedPrompt}${location ? `. I'm in/near ${location}` : ""}`;
+    }
+    if (discoveryMode === "vibes" && hasSelectedPreferences) {
+      body.preferences = preferences;
+    }
 
     lastPromptBody.current = body;
 
@@ -281,7 +406,10 @@ export default function HomeClient({
     }
   }
 
-  const canSubmit = prompt.trim().length > 0;
+  const canSubmit =
+    discoveryMode === "prompt"
+      ? prompt.trim().length > 0
+      : hasSelectedPreferences;
 
   const filteredByWhen = filterByWhen(events, whenFilter);
   const filteredByPrice = filterByPrice(filteredByWhen, priceFilter);
@@ -346,18 +474,87 @@ export default function HomeClient({
             </div>
           </div>
 
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              💭 What are you in the mood for?
-            </label>
-            <Textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="A chill Saturday with friends. Free or cheap. Outdoors preferred."
-              rows={3}
-              className="text-base min-h-[100px] resize-none"
-            />
-          </div>
+          <Tabs
+            value={discoveryMode}
+            onValueChange={(value) => setDiscoveryMode(value as DiscoveryMode)}
+            className="space-y-4"
+          >
+            <TabsList className="grid h-10 w-full grid-cols-2 rounded-md">
+              <TabsTrigger value="prompt">Type it</TabsTrigger>
+              <TabsTrigger value="vibes">Pick options</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="prompt" className="mt-0 space-y-2">
+              <label className="text-sm font-medium block" htmlFor="mood-prompt">
+                💭 What are you in the mood for?
+              </label>
+              <Textarea
+                id="mood-prompt"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="I'm bored on a Saturday. Free or cheap. Outdoors preferred."
+                rows={3}
+                className="text-base min-h-[110px] resize-none"
+              />
+            </TabsContent>
+
+            <TabsContent value="vibes" className="mt-0 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <SlidersHorizontal className="w-4 h-4 text-primary" />
+                  <span>Choose a few signals</span>
+                </div>
+                {hasSelectedPreferences && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedPreferences(createEmptyPreferences())}
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Clear
+                  </Button>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                {PREFERENCE_GROUPS.map((group) => (
+                  <fieldset key={group.key} className="space-y-2">
+                    <legend className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {group.label}
+                    </legend>
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                      {group.options.map((option) => {
+                        const selected = selectedPreferences[group.key].includes(
+                          option.label
+                        );
+
+                        return (
+                          <Button
+                            key={option.label}
+                            type="button"
+                            size="sm"
+                            variant={selected ? "default" : "outline"}
+                            aria-pressed={selected}
+                            onClick={() =>
+                              togglePreference(group.key, option.label)
+                            }
+                            className={cn(
+                              "h-10 justify-start rounded-md px-3 text-left sm:w-auto",
+                              selected && "shadow-sm"
+                            )}
+                          >
+                            <span aria-hidden="true">{option.emoji}</span>
+                            <span>{option.label}</span>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
 
           <Button
             size="lg"
@@ -700,6 +897,3 @@ export default function HomeClient({
     </main>
   );
 }
-
-// Suppress unused import warning during dev — `cn` may be used in future variants.
-void cn;

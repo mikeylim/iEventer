@@ -5,8 +5,12 @@ test.describe("Anonymous home page", () => {
     await page.goto("/");
 
     // Hero copy
-    await expect(page.getByRole("heading", { name: "Bored?" })).toBeVisible();
-    await expect(page.getByText(/Let AI find your next adventure/i)).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: /plan your perfect outing in seconds/i,
+      })
+    ).toBeVisible();
+    await expect(page.getByText(/real events nearby/i)).toBeVisible();
 
     // The top nav should offer sign-in (since we're not signed in)
     await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
@@ -28,6 +32,19 @@ test.describe("Anonymous home page", () => {
 
     const textarea = page.getByPlaceholder(/I'm bored/i);
     await textarea.fill("I want to do something outdoors this weekend");
+
+    const submit = page.getByRole("button", { name: /find something fun/i });
+    await expect(submit).toBeEnabled();
+  });
+
+  test("selecting vibe options enables the submit button", async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByRole("tab", { name: /pick options/i }).click();
+    await expect(page.getByPlaceholder(/I'm bored/i)).toBeHidden();
+
+    await page.getByRole("button", { name: /Chill/i }).click();
+    await page.getByRole("button", { name: /Outdoor/i }).click();
 
     const submit = page.getByRole("button", { name: /find something fun/i });
     await expect(submit).toBeEnabled();

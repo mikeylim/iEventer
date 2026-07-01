@@ -9,6 +9,14 @@ export async function POST(req: NextRequest) {
   try {
     const { prompt, preferences, count, exclude } = await req.json();
     const numSuggestions = count || 4;
+    const preferenceSummary = describePreferences(preferences);
+
+    if (!prompt && !preferenceSummary) {
+      return NextResponse.json(
+        { error: "Add a prompt or pick at least one option." },
+        { status: 400 }
+      );
+    }
 
     // Enrich with user profile if signed in
     const sessionProfile = await getSessionProfile();
@@ -28,7 +36,7 @@ export async function POST(req: NextRequest) {
       : "";
 
     const systemPrompt = `You are iEventer, a fun and enthusiastic activity recommender.
-Given a user's input about what they want to do, their mood, who they're with, and their preferences,
+Given a user's input about what they want to do, their mood, who they're with, and their selected preference chips,
 suggest exactly ${numSuggestions} creative and detailed activity ideas.${excludeNote}${profileNote}
 
 For EACH suggestion, respond in this exact JSON format:
@@ -53,12 +61,17 @@ For EACH suggestion, respond in this exact JSON format:
 
 Be creative, practical, and inclusive. Mix free and paid options. Include both indoor and outdoor ideas.
 If the user mentions a location, tailor suggestions to that area.
+If selected preference chips are provided, treat them as intentional constraints and use them to choose the most suitable activity/event categories.
 Always include at least one free option.
-Make the steps actionable and specific — tell them HOW to do it, not just what to do.`;
+Make the steps actionable and specific — tell them HOW to do it, not just what to do.
+Make searchKeyword a concise Eventbrite-style search query for real nearby events that match the strongest user intent.`;
 
-    const userMessage = prompt
-      ? `User says: "${prompt}"`
-      : `User preferences: ${JSON.stringify(preferences)}`;
+    const userMessage = [
+      prompt ? `User says: "${prompt}"` : "",
+      preferenceSummary ? `Selected preferences: ${preferenceSummary}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     const result = await model.generateContent([
       { text: systemPrompt },
@@ -94,4 +107,37 @@ function friendlyGeminiError(err: unknown): string {
     return "Couldn't reach Gemini. Check your internet connection.";
   }
   return "Failed to generate suggestions. Try again.";
+}
+
+function describePreferences(preferences: unknown): string {
+  if (!preferences || typeof preferences !== "object" || Array.isArray(preferences)) {
+    return "";
+  }
+
+  const labels: Record<string, string> = {
+    mood: "Mood",
+    company: "Company",
+    budget: "Budget",
+    setting: "Setting",
+    timing: "Timing",
+    location: "Location",
+  };
+
+  return Object.entries(preferences as Record<string, unknown>)
+    .map(([key, value]) => {
+      if (Array.isArray(value)) {
+        const selected = value.filter((item) => typeof item === "string");
+        return selected.length > 0
+          ? `${labels[key] ?? key}: ${selected.join(", ")}`
+          : "";
+      }
+
+      if (typeof value === "string" && value.trim()) {
+        return `${labels[key] ?? key}: ${value.trim()}`;
+      }
+
+      return "";
+    })
+    .filter(Boolean)
+    .join("; ");
 }
