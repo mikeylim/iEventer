@@ -6,36 +6,37 @@ import { parseAiJson } from "@/lib/parseAiJson";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: NextRequest) {
-  try {
-    const { prompt, preferences, count, exclude } = await req.json();
-    const numSuggestions = count || 4;
-    const preferenceSummary = describePreferences(preferences);
+	try {
+		const { prompt, preferences, count, exclude } = await req.json();
+		const numSuggestions = count || 4;
+		const preferenceSummary = describePreferences(preferences);
 
-    if (!prompt && !preferenceSummary) {
-      return NextResponse.json(
-        { error: "Add a prompt or pick at least one option." },
-        { status: 400 }
-      );
-    }
+		if (!prompt && !preferenceSummary) {
+			return NextResponse.json(
+				{ error: "Add a prompt or pick at least one option." },
+				{ status: 400 },
+			);
+		}
 
-    // Enrich with user profile if signed in
-    const sessionProfile = await getSessionProfile();
-    const profileNote = sessionProfile
-      ? `\n\nUser profile: ${summarizeProfile(sessionProfile)}. Weight suggestions toward these interests when relevant, but still vary the ideas.`
-      : "";
+		// Enrich with user profile if signed in
+		const sessionProfile = await getSessionProfile();
+		const profileNote = sessionProfile
+			? `\n\nUser profile: ${summarizeProfile(sessionProfile)}. Weight suggestions toward these interests when relevant, but still vary the ideas.`
+			: "";
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-lite",
-      generationConfig: {
-        responseMimeType: "application/json",
-      },
-    });
+		const model = genAI.getGenerativeModel({
+			model: "gemini-3.1-flash-lite",
+			generationConfig: {
+				responseMimeType: "application/json",
+			},
+		});
 
-    const excludeNote = exclude && exclude.length > 0
-      ? `\n\nIMPORTANT: Do NOT suggest any of these activities (already suggested): ${exclude.join(", ")}. Come up with completely different ideas.`
-      : "";
+		const excludeNote =
+			exclude && exclude.length > 0
+				? `\n\nIMPORTANT: Do NOT suggest any of these activities (already suggested): ${exclude.join(", ")}. Come up with completely different ideas.`
+				: "";
 
-    const systemPrompt = `You are iEventer, a fun and enthusiastic activity recommender.
+		const systemPrompt = `You are iEventer, a fun and enthusiastic activity recommender.
 Given a user's input about what they want to do, their mood, who they're with, and their selected preference chips,
 suggest exactly ${numSuggestions} creative and detailed activity ideas.${excludeNote}${profileNote}
 
@@ -66,78 +67,70 @@ Always include at least one free option.
 Make the steps actionable and specific — tell them HOW to do it, not just what to do.
 Make searchKeyword a concise Eventbrite-style search query for real nearby events that match the strongest user intent.`;
 
-    const userMessage = [
-      prompt ? `User says: "${prompt}"` : "",
-      preferenceSummary ? `Selected preferences: ${preferenceSummary}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
+		const userMessage = [
+			prompt ? `User says: "${prompt}"` : "",
+			preferenceSummary ? `Selected preferences: ${preferenceSummary}` : "",
+		]
+			.filter(Boolean)
+			.join("\n");
 
-    const result = await model.generateContent([
-      { text: systemPrompt },
-      { text: userMessage },
-    ]);
+		const result = await model.generateContent([{ text: systemPrompt }, { text: userMessage }]);
 
-    const text = result.response.text();
-    const data = parseAiJson(text);
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error("Gemini API error:", error);
-    return NextResponse.json(
-      { error: friendlyGeminiError(error) },
-      { status: 500 }
-    );
-  }
+		const text = result.response.text();
+		const data = parseAiJson(text);
+		return NextResponse.json(data);
+	} catch (error) {
+		console.error("Gemini API error:", error);
+		return NextResponse.json({ error: friendlyGeminiError(error) }, { status: 500 });
+	}
 }
 
 // Translate raw SDK errors into a friendly UI message.
 function friendlyGeminiError(err: unknown): string {
-  const msg = err instanceof Error ? err.message : String(err);
+	const msg = err instanceof Error ? err.message : String(err);
 
-  if (/RESOURCE_EXHAUSTED|429|quota/i.test(msg)) {
-    return "AI is busy right now (rate limit). Try again in a moment.";
-  }
-  if (/UNAUTHENTICATED|401|API key/i.test(msg)) {
-    return "Gemini API key is invalid or missing.";
-  }
-  if (/PERMISSION_DENIED|403/i.test(msg)) {
-    return "Gemini API key doesn't have access to this model.";
-  }
-  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|UND_ERR_SOCKET/i.test(msg)) {
-    return "Couldn't reach Gemini. Check your internet connection.";
-  }
-  return "Failed to generate suggestions. Try again.";
+	if (/RESOURCE_EXHAUSTED|429|quota/i.test(msg)) {
+		return "AI is busy right now (rate limit). Try again in a moment.";
+	}
+	if (/UNAUTHENTICATED|401|API key/i.test(msg)) {
+		return "Gemini API key is invalid or missing.";
+	}
+	if (/PERMISSION_DENIED|403/i.test(msg)) {
+		return "Gemini API key doesn't have access to this model.";
+	}
+	if (/fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|UND_ERR_SOCKET/i.test(msg)) {
+		return "Couldn't reach Gemini. Check your internet connection.";
+	}
+	return "Failed to generate suggestions. Try again.";
 }
 
 function describePreferences(preferences: unknown): string {
-  if (!preferences || typeof preferences !== "object" || Array.isArray(preferences)) {
-    return "";
-  }
+	if (!preferences || typeof preferences !== "object" || Array.isArray(preferences)) {
+		return "";
+	}
 
-  const labels: Record<string, string> = {
-    mood: "Mood",
-    company: "Company",
-    budget: "Budget",
-    setting: "Setting",
-    timing: "Timing",
-    location: "Location",
-  };
+	const labels: Record<string, string> = {
+		mood: "Mood",
+		company: "Company",
+		budget: "Budget",
+		setting: "Setting",
+		timing: "Timing",
+		location: "Location",
+	};
 
-  return Object.entries(preferences as Record<string, unknown>)
-    .map(([key, value]) => {
-      if (Array.isArray(value)) {
-        const selected = value.filter((item) => typeof item === "string");
-        return selected.length > 0
-          ? `${labels[key] ?? key}: ${selected.join(", ")}`
-          : "";
-      }
+	return Object.entries(preferences as Record<string, unknown>)
+		.map(([key, value]) => {
+			if (Array.isArray(value)) {
+				const selected = value.filter((item) => typeof item === "string");
+				return selected.length > 0 ? `${labels[key] ?? key}: ${selected.join(", ")}` : "";
+			}
 
-      if (typeof value === "string" && value.trim()) {
-        return `${labels[key] ?? key}: ${value.trim()}`;
-      }
+			if (typeof value === "string" && value.trim()) {
+				return `${labels[key] ?? key}: ${value.trim()}`;
+			}
 
-      return "";
-    })
-    .filter(Boolean)
-    .join("; ");
+			return "";
+		})
+		.filter(Boolean)
+		.join("; ");
 }
