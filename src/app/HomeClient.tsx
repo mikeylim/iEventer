@@ -10,6 +10,7 @@ import {
   Filter,
   SlidersHorizontal,
   RotateCcw,
+  CalendarDays,
 } from "lucide-react";
 import {
   addEventToPlan,
@@ -709,13 +710,22 @@ export default function HomeClient({
       {/* AI Suggestions */}
       {suggestions.length > 0 && (
         <section className="space-y-6 animate-fade-in">
-          <div>
-            <h2 className="font-display text-2xl mb-1">
-              AI Suggestions for You
-            </h2>
-            <p className="text-muted-foreground">
-              Based on your interests and what you&apos;re looking for.
-            </p>
+          <div className="flex items-start gap-3 border-l-4 border-primary pl-4">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <Sparkles className="size-5" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="mb-1 text-sm font-semibold text-foreground">
+                AI-generated activity ideas
+              </p>
+              <h2 className="font-display text-2xl mb-1">
+                AI Suggestions for You
+              </h2>
+              <p className="text-muted-foreground">
+                Creative ways to spend your time, matched to your request and
+                interests. Use Find Events to turn an idea into real listings.
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -749,7 +759,7 @@ export default function HomeClient({
       )}
 
       {/* Events */}
-      <div ref={eventsSectionRef} />
+      <div ref={eventsSectionRef} className="scroll-mt-24" />
       {eventsLoading && (
         <div className="text-center py-10 text-muted-foreground flex items-center justify-center gap-2">
           <Loader2 className="w-5 h-5 animate-spin" />
@@ -759,13 +769,22 @@ export default function HomeClient({
 
       {events.length > 0 && (
         <section className="space-y-6 animate-fade-in">
-          <div>
-            <h2 className="font-display text-2xl mb-1">
-              Events Happening Near You
-            </h2>
-            <p className="text-muted-foreground">
-              Real events from Eventbrite, filterable by when, price, and category.
-            </p>
+          <div className="flex items-start gap-3 border-l-4 border-secondary pl-4">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary/15 text-secondary">
+              <CalendarDays className="size-5" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="mb-1 text-sm font-semibold text-foreground">
+                Real Eventbrite listings
+              </p>
+              <h2 className="font-display text-2xl mb-1">
+                Events Happening Near You
+              </h2>
+              <p className="text-muted-foreground">
+                Scheduled events you can open, book, and add to your plan,
+                filterable by when, price, and category.
+              </p>
+            </div>
           </div>
 
           {/* Filters */}

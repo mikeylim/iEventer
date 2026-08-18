@@ -21,6 +21,8 @@ function makeEvent(overrides: Partial<EventItem> = {}): EventItem {
 describe("EventCard", () => {
   it("renders the title, venue, and category", () => {
     render(<EventCard event={makeEvent()} onAddToPlan={() => {}} isInPlan={false} />);
+    expect(screen.getByText("Real event")).toBeInTheDocument();
+    expect(screen.getByText("Eventbrite")).toBeInTheDocument();
     expect(screen.getByText("Toronto Jazz Festival")).toBeInTheDocument();
     expect(screen.getByText(/Harbourfront/)).toBeInTheDocument();
     expect(screen.getByText("Music")).toBeInTheDocument();

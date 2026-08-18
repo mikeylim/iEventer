@@ -1,9 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, MapPin, Search } from "lucide-react";
+import {
+	ChevronDown,
+	ChevronUp,
+	Clock3,
+	MapPin,
+	Search,
+	Sparkles,
+	WalletCards,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 export interface Suggestion {
 	title: string;
@@ -31,23 +38,49 @@ export function AISuggestionCard({
 	const s = suggestion;
 
 	return (
-		<div className="bg-card rounded-2xl border border-border p-6 hover:shadow-lg transition-shadow duration-300 animate-fade-in flex flex-col gap-4">
+		<article
+			aria-label={`AI idea: ${s.title}`}
+			className="flex flex-col gap-4 overflow-hidden rounded-lg border border-primary/25 bg-accent/10 p-5 shadow-sm transition-[border-color,box-shadow] duration-300 animate-fade-in hover:border-primary/45 hover:shadow-md">
+			<div className="flex items-center justify-between gap-3">
+				<span className="inline-flex items-center gap-1.5 rounded-md border border-primary/25 bg-background/80 px-2 py-1 text-xs font-semibold text-foreground">
+					<Sparkles className="size-3.5 text-primary" aria-hidden="true" />
+					AI idea
+				</span>
+				<span className="text-xs font-medium text-muted-foreground">
+					Generated for you
+				</span>
+			</div>
+
 			<div className="flex items-start gap-3">
-				<span className="text-4xl shrink-0">{s.emoji}</span>
+				<span
+					aria-hidden="true"
+					className="flex size-12 shrink-0 items-center justify-center rounded-md border border-primary/15 bg-background text-3xl shadow-sm">
+					{s.emoji}
+				</span>
 				<div className="flex-1">
 					<h3 className="font-display text-xl mb-2">{s.title}</h3>
 					<p className="text-sm text-muted-foreground">{s.description}</p>
 				</div>
 			</div>
 
-			<div className="flex flex-wrap gap-2">
-				<Badge variant="outline">{s.details.cost}</Badge>
-				<Badge variant="outline">{s.details.duration}</Badge>
-				<Badge variant="outline">{s.details.difficulty}</Badge>
-				<Badge variant="outline">{s.details.bestFor}</Badge>
+			<div className="grid grid-cols-2 gap-2" aria-label="Idea details">
+				<div className="rounded-md border border-primary/15 bg-background/70 px-3 py-2">
+					<span className="mb-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+						<WalletCards className="size-3.5" aria-hidden="true" />
+						Cost
+					</span>
+					<span className="text-sm font-medium">{s.details.cost}</span>
+				</div>
+				<div className="rounded-md border border-primary/15 bg-background/70 px-3 py-2">
+					<span className="mb-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+						<Clock3 className="size-3.5" aria-hidden="true" />
+						Duration
+					</span>
+					<span className="text-sm font-medium">{s.details.duration}</span>
+				</div>
 			</div>
 
-			<div className="bg-accent/30 rounded-xl p-3 flex items-start gap-2">
+			<div className="flex items-start gap-2 rounded-md border border-primary/10 bg-background/60 p-3">
 				<MapPin className="w-4 h-4 mt-0.5 text-primary shrink-0" />
 				<span className="text-sm">{s.details.location}</span>
 			</div>
@@ -88,6 +121,6 @@ export function AISuggestionCard({
 					Find Events
 				</Button>
 			</div>
-		</div>
+		</article>
 	);
 }

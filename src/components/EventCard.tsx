@@ -1,6 +1,7 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
-import { Calendar, MapPin, Plus, Check } from "lucide-react";
+import { Calendar, MapPin, Plus, Check, TicketCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatEventDate } from "@/lib/format";
@@ -30,21 +31,34 @@ export function EventCard({
   const date = formatEventDate(event.start);
 
   return (
-    <div className="bg-card rounded-2xl overflow-hidden border border-border hover:shadow-lg transition-shadow duration-300 flex flex-col animate-fade-in">
-      {event.logo ? (
-        <div className="aspect-[4/3] relative overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+    <article
+      aria-label={`Real event: ${event.name}`}
+      className="flex flex-col overflow-hidden rounded-lg border border-secondary/40 bg-card shadow-sm transition-[border-color,box-shadow] duration-300 animate-fade-in hover:border-secondary/70 hover:shadow-md"
+    >
+      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+        {event.logo ? (
           <img
             src={event.logo}
             alt=""
             className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
           />
+        ) : (
+          <div className="flex h-full items-center justify-center bg-gradient-to-br from-muted to-accent/30">
+            <Calendar className="w-10 h-10 text-muted-foreground/40" />
+          </div>
+        )}
+
+        <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-secondary/30 bg-card/95 px-2 py-1 text-xs font-semibold text-foreground shadow-sm backdrop-blur-sm">
+            <TicketCheck className="size-3.5 text-secondary" aria-hidden="true" />
+            Real event
+          </span>
+          <span className="rounded-md bg-card/95 px-2 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
+            Eventbrite
+          </span>
         </div>
-      ) : (
-        <div className="aspect-[4/3] bg-gradient-to-br from-muted to-accent/30 flex items-center justify-center">
-          <Calendar className="w-10 h-10 text-muted-foreground/40" />
-        </div>
-      )}
+      </div>
+
       <div className="p-5 flex-1 flex flex-col gap-3">
         <div className="flex flex-wrap gap-2">
           <Badge variant={event.isFree ? "secondary" : "outline"}>
@@ -104,6 +118,6 @@ export function EventCard({
           </Button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }

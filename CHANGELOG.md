@@ -5,6 +5,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [UX Phase B — Results hierarchy] — 2026-08-18
+
+### Changed
+- AI suggestions now use a clearly labeled, lightly tinted idea-card treatment that is visually distinct from bookable event listings.
+- AI suggestion metadata is reduced from four competing fields to the two decision-making essentials: cost and duration.
+- Real Eventbrite listings now carry persistent `Real event` and `Eventbrite` markers on the media area.
+- Results section headers now explain the difference between generated activity ideas and scheduled events users can open, book, and add to a plan.
+
+### Fixed
+- Added scroll clearance so `Find Events` does not place the real-events heading underneath the sticky navigation.
+
+---
+
 ## [Phase 8.5 — Auto-deploy on push to main] — 2026-05-09
 
 ### Added

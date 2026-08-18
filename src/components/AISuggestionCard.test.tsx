@@ -28,17 +28,18 @@ function makeSuggestion(overrides: Partial<Suggestion> = {}): Suggestion {
 describe("AISuggestionCard", () => {
   it("renders the title, emoji, and description", () => {
     render(<AISuggestionCard suggestion={makeSuggestion()} onFindEvents={() => {}} />);
+    expect(screen.getByText("AI idea")).toBeInTheDocument();
     expect(screen.getByText("Try Indoor Bouldering")).toBeInTheDocument();
     expect(screen.getByText("🧗")).toBeInTheDocument();
     expect(screen.getByText(/Climb walls/)).toBeInTheDocument();
   });
 
-  it("renders all four detail chips", () => {
+  it("shows only cost and duration in the compact details", () => {
     render(<AISuggestionCard suggestion={makeSuggestion()} onFindEvents={() => {}} />);
-    expect(screen.getByText("Beginner")).toBeInTheDocument();
     expect(screen.getByText("$20-30")).toBeInTheDocument();
     expect(screen.getByText("2 hours")).toBeInTheDocument();
-    expect(screen.getByText("Solo or small groups")).toBeInTheDocument();
+    expect(screen.queryByText("Beginner")).not.toBeInTheDocument();
+    expect(screen.queryByText("Solo or small groups")).not.toBeInTheDocument();
   });
 
   it("starts collapsed: steps are not visible by default", () => {
