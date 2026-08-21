@@ -1,4 +1,4 @@
-# 🎉 iEventer
+# iEventer
 
 > **Bored? Let AI find your next adventure.**
 
