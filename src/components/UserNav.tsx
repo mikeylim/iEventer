@@ -42,6 +42,7 @@ export async function UserNav() {
         <Button
           variant="ghost"
           className="rounded-full p-0 h-9 w-9 hover:bg-muted"
+          aria-label="Open account menu"
         >
           <Avatar className="h-9 w-9">
             {session.user.image && (
@@ -65,13 +66,13 @@ export async function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/plans" className="cursor-pointer">
-            <FileText className="mr-2 h-4 w-4" />
+            <FileText className="mr-2 h-4 w-4" aria-hidden="true" />
             My Plans
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/onboarding" className="cursor-pointer">
-            <UserIcon className="mr-2 h-4 w-4" />
+            <UserIcon className="mr-2 h-4 w-4" aria-hidden="true" />
             Profile / Interests
           </Link>
         </DropdownMenuItem>
@@ -85,13 +86,12 @@ export async function UserNav() {
             redirect("/");
           }}
         >
-          <button
-            type="submit"
-            className="relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground w-full"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign out
-          </button>
+          <DropdownMenuItem asChild>
+            <button type="submit" className="w-full cursor-pointer">
+              <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
+              Sign out
+            </button>
+          </DropdownMenuItem>
         </form>
       </DropdownMenuContent>
     </DropdownMenu>

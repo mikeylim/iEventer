@@ -869,7 +869,7 @@ export default function HomeClient({
               <div
                 role="group"
                 aria-labelledby="when-filter-label"
-                className="flex items-center gap-1.5"
+                className="flex w-full flex-col items-start gap-1.5 sm:w-auto sm:flex-row sm:items-center"
               >
                 <span id="when-filter-label" className="text-xs text-muted-foreground">
                   When:
@@ -894,7 +894,7 @@ export default function HomeClient({
               <div
                 role="group"
                 aria-labelledby="price-filter-label"
-                className="flex items-center gap-1.5"
+                className="flex w-full flex-col items-start gap-1.5 sm:w-auto sm:flex-row sm:items-center"
               >
                 <span id="price-filter-label" className="text-xs text-muted-foreground">
                   Price:
@@ -920,7 +920,7 @@ export default function HomeClient({
                 <div
                   role="group"
                   aria-labelledby="category-filter-label"
-                  className="flex items-center gap-1.5"
+                  className="flex w-full flex-col items-start gap-1.5 sm:w-auto sm:flex-row sm:items-center"
                 >
                   <span
                     id="category-filter-label"

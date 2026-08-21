@@ -5,6 +5,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [UX Accessibility Pass] — 2026-08-21
+
+### Changed
+- Event date, price, and category filters now use keyboard-operable toggle buttons with exposed pressed states and visible focus styling.
+- AI suggestion disclosures now report their expanded state and identify the controlled instructions.
+- Onboarding interest choices expose their selected state, and location labels are programmatically associated with their inputs.
+- Signed-in account-menu actions participate in Radix keyboard navigation, with an explicit accessible name on the avatar trigger.
+
+### Fixed
+- Loading, result, empty, error, Daily Pick, and plan-update messages are announced to assistive technology instead of relying only on visual changes or console logs.
+- Plan deletion now uses a real disabled button instead of a clickable wrapper, and failed plan mutations show actionable error feedback.
+- Event discovery failures are surfaced to users rather than failing silently.
+- Added Playwright coverage for keyboard-operated event filters and API error alerts, plus component coverage for AI disclosure semantics.
+
+---
+
 ## [UX Phase B — Results hierarchy] — 2026-08-18
 
 ### Changed
