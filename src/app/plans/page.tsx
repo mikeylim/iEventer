@@ -4,7 +4,7 @@ import { db } from "@/db/client";
 import { plans, planEvents } from "@/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import Link from "next/link";
-import { Calendar, Plus, Trash2 } from "lucide-react";
+import { Calendar, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeletePlanButton } from "./DeletePlanButton";
 
@@ -101,11 +101,7 @@ export default async function PlansPage() {
                 >
                   <Link href={`/plans/${p.id}`}>View Details</Link>
                 </Button>
-                <DeletePlanButton planId={p.id} planTitle={p.title}>
-                  <Button variant="ghost" size="sm" aria-label="Delete plan">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </DeletePlanButton>
+                <DeletePlanButton planId={p.id} planTitle={p.title} />
               </div>
             </div>
           ))}

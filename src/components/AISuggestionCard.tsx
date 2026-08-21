@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
 	ChevronDown,
 	ChevronUp,
@@ -35,6 +35,7 @@ export function AISuggestionCard({
 	onFindEvents: (keyword: string) => void;
 }) {
 	const [expanded, setExpanded] = useState(false);
+	const stepsId = useId();
 	const s = suggestion;
 
 	return (
@@ -86,7 +87,7 @@ export function AISuggestionCard({
 			</div>
 
 			{expanded && (
-				<div className="space-y-2 pt-1">
+				<div id={stepsId} className="space-y-2 pt-1">
 					<h4 className="font-medium text-sm">How to do it:</h4>
 					<ol className="space-y-2 list-decimal list-inside text-sm text-muted-foreground">
 						{s.steps.map((step, index) => (
@@ -103,6 +104,8 @@ export function AISuggestionCard({
 					variant="outline"
 					size="sm"
 					onClick={() => setExpanded(!expanded)}
+					aria-expanded={expanded}
+					aria-controls={stepsId}
 					className="flex-1">
 					{expanded ? (
 						<>

@@ -77,7 +77,7 @@ export function OnboardingForm({
       {/* Location */}
       <div className="bg-card rounded-2xl border border-border p-6 space-y-3">
         <div>
-          <label className="font-display text-lg block">
+          <label htmlFor="onboarding-location" className="font-display text-lg block">
             Where do you live?
           </label>
           <p className="text-sm text-muted-foreground mt-1 mb-3">
@@ -85,6 +85,7 @@ export function OnboardingForm({
           </p>
         </div>
         <Input
+          id="onboarding-location"
           placeholder="e.g., Toronto, ON"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
@@ -106,6 +107,8 @@ export function OnboardingForm({
           <Badge
             variant={selected.size >= MIN_INTERESTS ? "default" : "outline"}
             className="text-base px-3 py-1 shrink-0"
+            aria-live="polite"
+            aria-label={`${selected.size} of ${MIN_INTERESTS} minimum interests selected`}
           >
             {selected.size}/{MIN_INTERESTS}
           </Badge>
@@ -119,14 +122,15 @@ export function OnboardingForm({
                 key={i.slug}
                 type="button"
                 onClick={() => toggleInterest(i.slug)}
+                aria-pressed={active}
                 className={cn(
-                  "px-4 py-2.5 rounded-full text-sm transition-all duration-200 border-2 inline-flex items-center gap-2",
+                  "px-4 py-2.5 rounded-full text-sm transition-all duration-200 border-2 inline-flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                   active
                     ? "bg-primary text-primary-foreground border-primary shadow-sm"
                     : "bg-card text-foreground border-border hover:border-primary/50 hover:bg-primary/5"
                 )}
               >
-                {active && <Check className="w-4 h-4" />}
+                {active && <Check className="w-4 h-4" aria-hidden="true" />}
                 <span>
                   {i.emoji} {i.name}
                 </span>
@@ -137,7 +141,11 @@ export function OnboardingForm({
       </div>
 
       {error && (
-        <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-xl px-4 py-3 text-sm">
+        <div
+          role="alert"
+          aria-atomic="true"
+          className="bg-destructive/10 border border-destructive/20 text-destructive rounded-xl px-4 py-3 text-sm"
+        >
           {error}
         </div>
       )}
@@ -145,7 +153,11 @@ export function OnboardingForm({
       {/* Sticky bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border py-4 px-4 z-40">
         <div className="max-w-2xl mx-auto flex items-center gap-4">
-          <div className="flex-1 text-sm text-muted-foreground">
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex-1 text-sm text-muted-foreground"
+          >
             {!location.trim()
               ? "Add a location to continue"
               : remaining > 0

@@ -174,6 +174,7 @@ export default function HomeClient({
   const [loading, setLoading] = useState(false);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
 
   const eventsSectionRef = useRef<HTMLDivElement>(null);
   const [eventsContinuation, setEventsContinuation] = useState<string | null>(null);
@@ -225,8 +226,10 @@ export default function HomeClient({
 
   function addToPlan(e: EventItem) {
     if (planIds.has(e.id)) return;
+    setError("");
     setPlan((prev) => [...prev, e]);
     setRoutePlan(null);
+    setStatusMessage(`${e.name} added to your plan.`);
 
     if (isSignedIn && planId) {
       startTransition(async () => {
@@ -252,6 +255,7 @@ export default function HomeClient({
         } catch (err) {
           console.error("Failed to save event to plan:", err);
           setPlan((prev) => prev.filter((p) => p.id !== e.id));
+          setError(`Couldn't add ${e.name} to your plan. Try again.`);
         }
       });
     }
@@ -259,8 +263,10 @@ export default function HomeClient({
 
   function removeFromPlan(id: string) {
     const target = plan.find((p) => p.id === id);
+    setError("");
     setPlan((prev) => prev.filter((e) => e.id !== id));
     setRoutePlan(null);
+    setStatusMessage(`${target?.name ?? "Event"} removed from your plan.`);
 
     if (isSignedIn && target?.planEventId) {
       startTransition(async () => {
@@ -269,6 +275,7 @@ export default function HomeClient({
         } catch (err) {
           console.error("Failed to remove event from plan:", err);
           if (target) setPlan((prev) => [...prev, target]);
+          setError(`Couldn't remove ${target?.name ?? "that event"}. Try again.`);
         }
       });
     }
@@ -277,6 +284,7 @@ export default function HomeClient({
   async function optimizeRoute() {
     setOptimizing(true);
     setRoutePlan(null);
+    setError("");
     try {
       const res = await fetch("/api/optimize-route", {
         method: "POST",
@@ -286,6 +294,7 @@ export default function HomeClient({
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setRoutePlan(data);
+      setStatusMessage("Your optimized route is ready.");
       if (isSignedIn && planId) {
         saveOptimizedRoute(planId, data).catch((err) =>
           console.error("Failed to save optimized route:", err)
@@ -326,7 +335,13 @@ export default function HomeClient({
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setSuggestions(data.suggestions || []);
+      const nextSuggestions = data.suggestions || [];
+      setSuggestions(nextSuggestions);
+      setStatusMessage(
+        nextSuggestions.length > 0
+          ? `${nextSuggestions.length} AI ideas generated.`
+          : "No AI ideas were found. Try changing your request."
+      );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -337,6 +352,7 @@ export default function HomeClient({
   async function loadMoreSuggestions() {
     if (!lastPromptBody.current) return;
     setSuggestionsLoading(true);
+    setError("");
     try {
       const body = {
         ...lastPromptBody.current,
@@ -350,7 +366,13 @@ export default function HomeClient({
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setSuggestions((prev) => [...prev, ...(data.suggestions || [])]);
+      const nextSuggestions = data.suggestions || [];
+      setSuggestions((prev) => [...prev, ...nextSuggestions]);
+      setStatusMessage(
+        nextSuggestions.length > 0
+          ? `${nextSuggestions.length} more AI ideas added.`
+          : "No more AI ideas were found."
+      );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -361,6 +383,7 @@ export default function HomeClient({
   const fetchEvents = useCallback(
     async (keyword: string) => {
       setEventsLoading(true);
+      setError("");
       setEvents([]);
       setEventsContinuation(null);
       setEventsQuery(keyword);
@@ -369,16 +392,27 @@ export default function HomeClient({
         if (location) params.set("location", location);
         const res = await fetch(`/api/discover?${params.toString()}`);
         const data = await res.json();
-        setEvents(data.events || []);
+        if (!res.ok || data.error) {
+          throw new Error(data.error || "Failed to load nearby events");
+        }
+        const nextEvents = data.events || [];
+        setEvents(nextEvents);
         setEventsContinuation(data.continuation || null);
+        setStatusMessage(
+          nextEvents.length > 0
+            ? `${nextEvents.length} nearby events found.`
+            : "No nearby events were found."
+        );
         setTimeout(() => {
           eventsSectionRef.current?.scrollIntoView({
             behavior: "smooth",
             block: "start",
           });
         }, 100);
-      } catch {
-        // silently fail
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to load nearby events"
+        );
       } finally {
         setEventsLoading(false);
       }
@@ -389,6 +423,7 @@ export default function HomeClient({
   async function loadMoreEvents() {
     if (!eventsContinuation || eventsLoadingMore) return;
     setEventsLoadingMore(true);
+    setError("");
     try {
       const params = new URLSearchParams({
         q: eventsQuery,
@@ -398,10 +433,21 @@ export default function HomeClient({
       if (location) params.set("location", location);
       const res = await fetch(`/api/discover?${params.toString()}`);
       const data = await res.json();
-      setEvents((prev) => [...prev, ...(data.events || [])]);
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to load more events");
+      }
+      const nextEvents = data.events || [];
+      setEvents((prev) => [...prev, ...nextEvents]);
       setEventsContinuation(data.continuation || null);
-    } catch {
-      // silently fail
+      setStatusMessage(
+        nextEvents.length > 0
+          ? `${nextEvents.length} more events added.`
+          : "No more events were found."
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load more events"
+      );
     } finally {
       setEventsLoadingMore(false);
     }
@@ -430,6 +476,14 @@ export default function HomeClient({
 
   return (
     <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-12">
+      <p
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {statusMessage}
+      </p>
       {/* Daily surprise pick */}
       {dailyPick && (
         <DailyPickCard initialPick={dailyPick} planId={planId} />
@@ -461,12 +515,19 @@ export default function HomeClient({
       <section>
         <div className="bg-card rounded-2xl border border-border p-6 space-y-4 max-w-3xl mx-auto">
           <div>
-            <label className="text-sm font-medium mb-2 block">
+            <label
+              htmlFor="discovery-location"
+              className="text-sm font-medium mb-2 block"
+            >
               📍 Where are you?
             </label>
             <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <MapPin
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                aria-hidden="true"
+              />
               <Input
+                id="discovery-location"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="Toronto, ON"
@@ -580,7 +641,11 @@ export default function HomeClient({
 
       {/* Error */}
       {error && (
-        <div className="max-w-3xl mx-auto bg-destructive/10 border border-destructive/20 text-destructive rounded-xl px-4 py-3 text-sm">
+        <div
+          role="alert"
+          aria-atomic="true"
+          className="max-w-3xl mx-auto bg-destructive/10 border border-destructive/20 text-destructive rounded-xl px-4 py-3 text-sm"
+        >
           {error}
         </div>
       )}
@@ -589,10 +654,13 @@ export default function HomeClient({
       {plan.length > 0 && (
         <section
           id="my-plan"
+          aria-labelledby="my-plan-heading"
           className="bg-gradient-to-br from-secondary/10 via-card to-accent/10 rounded-2xl border-2 border-secondary/30 p-6 space-y-4 max-w-3xl mx-auto animate-fade-in"
         >
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-2xl">My Plan</h2>
+            <h2 id="my-plan-heading" className="font-display text-2xl">
+              My Plan
+            </h2>
             <Badge variant="secondary">
               {plan.length} event{plan.length === 1 ? "" : "s"}
             </Badge>
@@ -625,7 +693,7 @@ export default function HomeClient({
                     size="sm"
                     variant="ghost"
                     onClick={() => removeFromPlan(e.id)}
-                    aria-label="Remove from plan"
+                    aria-label={`Remove ${e.name} from plan`}
                   >
                     <X className="w-4 h-4" />
                   </Button>
@@ -759,10 +827,14 @@ export default function HomeClient({
       )}
 
       {/* Events */}
-      <div ref={eventsSectionRef} className="scroll-mt-24" />
+      <div ref={eventsSectionRef} className="scroll-mt-24" aria-hidden="true" />
       {eventsLoading && (
-        <div className="text-center py-10 text-muted-foreground flex items-center justify-center gap-2">
-          <Loader2 className="w-5 h-5 animate-spin" />
+        <div
+          role="status"
+          aria-live="polite"
+          className="text-center py-10 text-muted-foreground flex items-center justify-center gap-2"
+        >
+          <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
           Searching nearby events...
         </div>
       )}
@@ -790,62 +862,95 @@ export default function HomeClient({
           {/* Filters */}
           <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <Filter className="w-4 h-4" />
+              <Filter className="w-4 h-4" aria-hidden="true" />
               Filters
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">When:</span>
+              <div
+                role="group"
+                aria-labelledby="when-filter-label"
+                className="flex items-center gap-1.5"
+              >
+                <span id="when-filter-label" className="text-xs text-muted-foreground">
+                  When:
+                </span>
                 <div className="flex flex-wrap gap-1">
                   {WHEN_FILTERS.map((opt) => (
-                    <Badge
+                    <Button
                       key={opt.value}
+                      type="button"
+                      size="sm"
                       variant={whenFilter === opt.value ? "default" : "outline"}
-                      className="cursor-pointer"
+                      aria-pressed={whenFilter === opt.value}
+                      className="h-7 rounded-md px-2 text-xs"
                       onClick={() => setWhenFilter(opt.value)}
                     >
                       {opt.label}
-                    </Badge>
+                    </Button>
                   ))}
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Price:</span>
+              <div
+                role="group"
+                aria-labelledby="price-filter-label"
+                className="flex items-center gap-1.5"
+              >
+                <span id="price-filter-label" className="text-xs text-muted-foreground">
+                  Price:
+                </span>
                 <div className="flex flex-wrap gap-1">
                   {PRICE_FILTERS.map((opt) => (
-                    <Badge
+                    <Button
                       key={opt.value}
+                      type="button"
+                      size="sm"
                       variant={priceFilter === opt.value ? "default" : "outline"}
-                      className="cursor-pointer"
+                      aria-pressed={priceFilter === opt.value}
+                      className="h-7 rounded-md px-2 text-xs"
                       onClick={() => setPriceFilter(opt.value)}
                     >
                       {opt.label}
-                    </Badge>
+                    </Button>
                   ))}
                 </div>
               </div>
 
               {availableCategories.length > 1 && (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">Category:</span>
+                <div
+                  role="group"
+                  aria-labelledby="category-filter-label"
+                  className="flex items-center gap-1.5"
+                >
+                  <span
+                    id="category-filter-label"
+                    className="text-xs text-muted-foreground"
+                  >
+                    Category:
+                  </span>
                   <div className="flex flex-wrap gap-1">
-                    <Badge
+                    <Button
+                      type="button"
+                      size="sm"
                       variant={!categoryFilter ? "default" : "outline"}
-                      className="cursor-pointer"
+                      aria-pressed={!categoryFilter}
+                      className="h-7 rounded-md px-2 text-xs"
                       onClick={() => setCategoryFilter("")}
                     >
                       All
-                    </Badge>
+                    </Button>
                     {availableCategories.map((cat) => (
-                      <Badge
+                      <Button
                         key={cat}
+                        type="button"
+                        size="sm"
                         variant={categoryFilter === cat ? "default" : "outline"}
-                        className="cursor-pointer"
+                        aria-pressed={categoryFilter === cat}
+                        className="h-7 rounded-md px-2 text-xs"
                         onClick={() => setCategoryFilter(cat)}
                       >
                         {cat}
-                      </Badge>
+                      </Button>
                     ))}
                   </div>
                 </div>
@@ -854,7 +959,11 @@ export default function HomeClient({
 
             {hasFiltersActive && (
               <div className="flex items-center justify-between pt-1 border-t border-border/50">
-                <p className="text-xs text-muted-foreground">
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className="text-xs text-muted-foreground"
+                >
                   Showing {displayEvents.length} of {events.length} events
                 </p>
                 <Button
@@ -885,7 +994,10 @@ export default function HomeClient({
           </div>
 
           {displayEvents.length === 0 && events.length > 0 && (
-            <p className="text-center text-sm text-muted-foreground py-4">
+            <p
+              role="status"
+              className="text-center text-sm text-muted-foreground py-4"
+            >
               No events match your filters. Try adjusting or clearing them.
             </p>
           )}

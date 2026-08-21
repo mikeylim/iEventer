@@ -51,9 +51,15 @@ describe("AISuggestionCard", () => {
   it("expands to show the step list when 'How to do it' is clicked", async () => {
     const user = userEvent.setup();
     render(<AISuggestionCard suggestion={makeSuggestion()} onFindEvents={() => {}} />);
-    await user.click(screen.getByRole("button", { name: /how to do it/i }));
+    const disclosure = screen.getByRole("button", { name: /how to do it/i });
+    expect(disclosure).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(disclosure);
+
+    expect(disclosure).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText(/How to do it:/)).toBeInTheDocument();
     expect(screen.getByText("Rent shoes at the front desk")).toBeInTheDocument();
+    expect(document.getElementById(disclosure.getAttribute("aria-controls")!)).toBeInTheDocument();
   });
 
   it("fires onFindEvents with the search keyword when the button is clicked", async () => {

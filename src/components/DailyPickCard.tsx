@@ -42,6 +42,8 @@ export function DailyPickCard({
   const [added, setAdded] = useState(false);
   const [isRegenerating, startRegen] = useTransition();
   const [isAdding, startAdd] = useTransition();
+  const [statusMessage, setStatusMessage] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (pick && !pick.seenAt) {
@@ -55,6 +57,7 @@ export function DailyPickCard({
 
   function handleAddToPlan() {
     if (!planId || !pick) return;
+    setError("");
     startAdd(async () => {
       try {
         await addEventToPlan(planId, {
@@ -71,13 +74,16 @@ export function DailyPickCard({
           imageUrl: e.logo || null,
         });
         setAdded(true);
+        setStatusMessage(`${e.name} added to your plan.`);
       } catch (err) {
         console.error("Failed to add daily pick to plan:", err);
+        setError(`Couldn't add ${e.name} to your plan. Try again.`);
       }
     });
   }
 
   function handleRegenerate() {
+    setError("");
     startRegen(async () => {
       try {
         const next = await regenerateTodaysPick();
@@ -89,14 +95,24 @@ export function DailyPickCard({
           dismissedAt: next.dismissedAt ? next.dismissedAt.toString() : null,
         });
         setAdded(false);
+        setStatusMessage(`${next.event.name} is now your daily pick.`);
       } catch (err) {
         console.error("Failed to regenerate pick:", err);
+        setError("Couldn't generate another daily pick. Try again.");
       }
     });
   }
 
   return (
     <section className="animate-fade-in">
+      <p
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {statusMessage}
+      </p>
       <div className="bg-gradient-to-br from-primary/5 via-card to-secondary/5 rounded-3xl overflow-hidden border-2 border-primary/20 shadow-xl">
         {/* Cinematic image */}
         <div className="relative">
@@ -195,6 +211,11 @@ export function DailyPickCard({
               {isRegenerating ? "Picking..." : "Try Another"}
             </Button>
           </div>
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
         </div>
       </div>
     </section>
