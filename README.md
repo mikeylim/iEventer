@@ -16,11 +16,10 @@ An AI-powered event and activity discovery app that learns your interests, mood,
 ![Drizzle ORM](https://img.shields.io/badge/Drizzle-ORM-green)
 ![Auth.js](https://img.shields.io/badge/Auth.js-v5-purple)
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange?logo=cloudflare)
-![Gemini](https://img.shields.io/badge/Google-Gemini%202.5-4285F4?logo=google)
+![Gemini](https://img.shields.io/badge/Google-Gemini-4285F4?logo=google)
 
 ---
 
-<!-- Screenshots will render once captured (see docs/screenshots/README.md) -->
 <p align="center">
   <img src="./docs/screenshots/home-light.png" alt="Home with daily surprise pick (light mode)" width="48%" />
   <img src="./docs/screenshots/onboarding.png" alt="Onboarding flow with AI-generated contents" width="40%" />
@@ -40,7 +39,7 @@ An AI-powered event and activity discovery app that learns your interests, mood,
 
 - **Auth** — Google OAuth via Auth.js v5, JWT sessions (edge-compatible), Drizzle adapter for user persistence
 - **Onboarding** — interactive interest selection, location capture, sticky bottom continue bar
-- **AI suggestions** — Gemini 2.5 Flash Lite with structured JSON output (`responseMimeType: "application/json"`) and a hardened parser that recovers from common malformations
+- **AI suggestions** — Gemini 3.1 Flash Lite with structured JSON output (`responseMimeType: "application/json"`) and a hardened parser that recovers from common malformations
 - **Real events** — Eventbrite Destination Search API, geocoded via Nominatim, with sort/filter (when, price, dynamic category) and infinite-scroll pagination
 - **Plans** — persisted in Postgres, optimistic add/remove with rollback, AI-cached optimized routes
 - **Daily surprise pick** — deterministic interest rotation by day-of-year, 30-day exclusion of recently-picked events, regenerate / dismiss / add-to-plan actions
@@ -54,7 +53,7 @@ An AI-powered event and activity discovery app that learns your interests, mood,
 | **Frontend** | Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · shadcn/ui · React Hook Form · Zod |
 | **Backend** | Next.js Server Actions · Drizzle ORM · PostgreSQL (Supabase) |
 | **Auth** | Auth.js (NextAuth) v5 with Google OAuth · JWT sessions · Drizzle adapter |
-| **AI** | Google Gemini 2.5 Flash Lite with structured JSON responses |
+| **AI** | Google Gemini Flash Lite with structured JSON responses |
 | **External APIs** | Eventbrite Destination Search · Nominatim (geocoding) |
 | **Hosting** | Cloudflare Workers via `@opennextjs/cloudflare` |
 | **Theming** | `next-themes` (light/dark/system), Playfair Display + Inter via `next/font` |
@@ -75,7 +74,7 @@ flowchart LR
   end
 
   Supabase[(Supabase Postgres<br/>users · profiles · plans<br/>events · daily_picks)]
-  Gemini[Google Gemini 2.5 Flash Lite]
+  Gemini[Google Gemini Flash Lite]
   Eventbrite[Eventbrite API]
   Nominatim[Nominatim Geocoding]
 

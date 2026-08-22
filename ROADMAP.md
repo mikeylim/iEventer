@@ -25,13 +25,13 @@ Live at [ieventer.mikedohyunlim.workers.dev](https://ieventer.mikedohyunlim.work
 - [x] Architecture diagram (Mermaid; renders on GitHub natively)
 - [x] Project structure + design philosophy sections
 - [ ] Capture screenshots into `docs/screenshots/` (see that folder's README for spec)
-  - [ ] `home-light.png`
+  - [x] `home-light.png`
   - [ ] `home-dark.png`
-  - [ ] `onboarding.png`
-  - [ ] `plan-detail.png`
+  - [x] `onboarding.png`
+  - [x] `plan-detail.png`
   - [ ] `signin.png`
 - [ ] Record `golden-path.gif` (30 sec, ≤ 8 MB) — sign in → daily pick → search → add to plan → optimize route
-- [ ] Add build-status badge (after Phase 8 CI is in place)
+- [x] Add build-status badge (after Phase 8 CI is in place)
 
 **Estimated:** ~1 hour
 
@@ -47,7 +47,7 @@ Live at [ieventer.mikedohyunlim.workers.dev](https://ieventer.mikedohyunlim.work
 - [ ] Define unified `NormalizedEvent` interface across sources (already started in `src/lib/eventbrite.ts`)
 - [ ] Parallel-fetch all sources, dedupe by name + date + venue
 - [ ] Add source provider badge on event cards
-- [ ] Update `/api/events` to query all sources and merge results
+- [ ] Update `/api/discover` to query all sources and merge results
 
 **Estimated:** 1–2 days
 
