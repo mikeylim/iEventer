@@ -4,7 +4,7 @@ import { ClipboardList } from "lucide-react";
 
 /**
  * Floating action button — shows when the user's plan has events.
- * Click smooth-scrolls to the #my-plan section so the plan stays
+ * Click scrolls to the #my-plan section so the plan stays
  * accessible no matter how far down the user has scrolled.
  */
 export function MyPlanFAB({ eventCount }: { eventCount: number }) {
@@ -13,7 +13,12 @@ export function MyPlanFAB({ eventCount }: { eventCount: number }) {
   function handleClick() {
     const target = document.getElementById("my-plan");
     if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      target.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "start",
+      });
     }
   }
 

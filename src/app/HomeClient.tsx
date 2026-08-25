@@ -405,7 +405,10 @@ export default function HomeClient({
         );
         setTimeout(() => {
           eventsSectionRef.current?.scrollIntoView({
-            behavior: "smooth",
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+              .matches
+              ? "auto"
+              : "smooth",
             block: "start",
           });
         }, 100);
