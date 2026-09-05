@@ -39,7 +39,7 @@ An AI-powered event and activity discovery app that learns your interests, mood,
 
 - **Auth** — Google OAuth via Auth.js v5, JWT sessions (edge-compatible), Drizzle adapter for user persistence
 - **Onboarding** — interactive interest selection, location capture, sticky bottom continue bar
-- **AI suggestions** — Gemini 3.1 Flash Lite with structured JSON output (`responseMimeType: "application/json"`) and a hardened parser that recovers from common malformations
+- **AI suggestions** — Gemini 3.5 Flash Lite through the maintained `@google/genai` SDK, with JSON Schema output, Zod validation, bounded inputs, retries, timeouts, and token-usage logging
 - **Real events** — Eventbrite Destination Search API, geocoded via Nominatim, with sort/filter (when, price, dynamic category) and infinite-scroll pagination
 - **Plans** — persisted in Postgres, optimistic add/remove with rollback, AI-cached optimized routes
 - **Daily surprise pick** — deterministic interest rotation by day-of-year, 30-day exclusion of recently-picked events, regenerate / dismiss / add-to-plan actions
@@ -119,6 +119,7 @@ src/
 │   ├── schema.ts                 # 11-table schema
 │   └── seed.ts                   # 45 interests across 12 categories
 ├── lib/
+│   ├── ai/                       # Shared Gemini client, runtime contracts, and response invariants
 │   ├── auth.config.ts            # Edge-safe Auth.js config (JWT)
 │   ├── auth.ts                   # Full server-side auth (with Drizzle adapter)
 │   ├── dailyPick.ts              # Daily-pick generation logic

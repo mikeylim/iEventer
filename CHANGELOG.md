@@ -5,6 +5,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Phase 10 — AI Contracts and Reliability] — 2026-09-04
+
+### Added
+- Shared Gemini client with configurable per-feature models, prompt version tracking, bounded retries, a 15-second timeout, and structured token-usage logs.
+- Zod contracts for suggestion requests/responses, route optimization, and Daily Pick selection, converted to Gemini response JSON Schema at runtime.
+- Contract and route-handler tests covering input limits, malformed output, unsafe URLs, exact suggestion counts, and hallucinated or duplicate route events. The suite now has 53 tests across 8 files.
+
+### Changed
+- Migrated all Gemini callers from the legacy `@google/generative-ai` package to the maintained `@google/genai` SDK and the default `gemini-3.5-flash-lite` model.
+- Moved profile, preference, exclusion, and event fields into serialized user context and explicitly treated them as untrusted data rather than instructions.
+- Centralized friendly API errors while keeping detailed failures and raw model content out of client responses.
+
+### Fixed
+- AI responses with missing fields, invalid counts, out-of-range Daily Pick indexes, or route events not present in the request are now rejected instead of silently accepted.
+- Hard JSON parse failures no longer append raw AI output to server logs.
+
+---
+
 ## [UX Accessibility Pass] — 2026-08-21
 
 ### Changed

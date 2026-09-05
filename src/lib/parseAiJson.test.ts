@@ -29,8 +29,14 @@ describe("parseAiJson", () => {
     expect(parseAiJson("[1, 2, 3]")).toEqual([1, 2, 3]);
   });
 
-  it("throws on truly invalid JSON, attaching raw output to the message", () => {
+  it("throws a sanitized error without exposing raw model output", () => {
     const broken = '{"a": "missing quote}';
-    expect(() => parseAiJson(broken)).toThrow(/Raw AI output/);
+    expect(() => parseAiJson(broken)).toThrow("AI response was not valid JSON.");
+
+    try {
+      parseAiJson(broken);
+    } catch (error) {
+      expect((error as Error).message).not.toContain(broken);
+    }
   });
 });

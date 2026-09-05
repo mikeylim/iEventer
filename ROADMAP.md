@@ -87,6 +87,23 @@ Live at [ieventer.mikedohyunlim.workers.dev](https://ieventer.mikedohyunlim.work
 
 ---
 
+## ✅ Phase 10 — AI Contracts + Reliability (DONE 2026-09-04)
+
+**Goal:** Make AI behavior bounded, observable, and defensible instead of relying on prompt wording alone.
+
+**Tasks shipped:**
+- [x] Replace the legacy `@google/generative-ai` package with the maintained `@google/genai` SDK
+- [x] Centralize Gemini model selection, request timeout, retry policy, prompt versions, and token-usage logging
+- [x] Validate suggestion, route, and Daily Pick inputs and outputs with Zod runtime contracts
+- [x] Send response JSON Schema to Gemini and reject malformed, incomplete, duplicate, or hallucinated results
+- [x] Separate untrusted user/event data from system instructions to reduce prompt-injection risk
+- [x] Sanitize parser and request failures so raw model output is not written to application logs
+- [x] Add route-handler and contract regression tests (53 tests across 8 files total)
+
+**Next AI follow-up:** Build a small versioned evaluation dataset and scoring script for recommendation relevance, constraint adherence, and route completeness.
+
+---
+
 ## 📌 Deferred (in agenda — bring up at natural revisit points)
 
 These were explicitly deferred during design review on **2026-04-27**:
