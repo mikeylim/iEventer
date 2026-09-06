@@ -183,6 +183,7 @@ Visit [http://localhost:3000](http://localhost:3000).
 | `npm run test:run` | Vitest single run (CI mode) |
 | `npm run test:e2e` | Playwright end-to-end tests |
 | `npm run lint` | ESLint |
+| `npm run audit:prod` | Fail on high or critical production dependency advisories |
 | `npm run cf:build` | Build for Cloudflare Workers (via OpenNext) |
 | `npm run cf:preview` | Preview the Workers build locally |
 | `npm run cf:deploy` | Deploy to Cloudflare |

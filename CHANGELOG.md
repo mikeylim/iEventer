@@ -5,6 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Production Dependency Audit] — 2026-09-06
+
+### Added
+- Added an `audit:prod` command that fails on high or critical production dependency advisories.
+- Added the production dependency audit to GitHub Actions immediately after the clean dependency install.
+
+---
+
 ## [Security Dependency Maintenance] — 2026-09-05
 
 ### Changed

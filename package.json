@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "audit:prod": "npm audit --omit=dev --audit-level=high",
     "test": "vitest",
     "test:run": "vitest run",
     "test:e2e": "playwright test",
