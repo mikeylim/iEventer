@@ -5,6 +5,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Security Dependency Maintenance] — 2026-09-05
+
+### Changed
+- Updated Next.js and `eslint-config-next` from 16.2.3 to 16.3.4.
+- Updated Auth.js to `next-auth` 5.0.0-beta.32 and `@auth/drizzle-adapter` 1.11.3, which resolve to patched `@auth/core` 0.41.3.
+- Updated Wrangler, esbuild, tsx, and compatible transitive development packages to patched releases.
+- Renamed the Vitest configuration to `vitest.config.mts` and replaced `__dirname` with `import.meta.dirname` for Vite's native ESM config loader.
+
+### Security
+- Reduced the production dependency audit from eight known vulnerabilities, including three critical findings, to zero.
+- Four moderate development-only esbuild findings remain under Drizzle Kit's legacy loader. The only npm-proposed remediation downgrades Drizzle Kit with `--force`, so it was deliberately not applied.
+
+---
+
 ## [Phase 10 — AI Contracts and Reliability] — 2026-09-04
 
 ### Added
