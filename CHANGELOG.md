@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [AI Request Size Protection] — 2026-09-09
+
+### Added
+- Added a shared streaming JSON reader that limits AI endpoint request bodies to 32 KiB.
+- Added route regression tests proving oversized suggestion and route-optimization requests return `413` before profile or Gemini work begins.
+
+### Security
+- AI endpoints now stop consuming oversized request streams instead of parsing unbounded JSON into memory or sending it to paid services.
+
+---
+
 ## [Production Dependency Audit] — 2026-09-06
 
 ### Added

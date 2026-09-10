@@ -74,6 +74,19 @@ describe("POST /api/optimize-route", () => {
     expect(mocks.generateStructuredAi).not.toHaveBeenCalled();
   });
 
+  it("rejects an oversized body before loading profile data or calling Gemini", async () => {
+    const response = await POST(
+      request({ events, preferences: "a".repeat(33 * 1024) })
+    );
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({
+      error: "Request body exceeds the 32 KiB limit.",
+    });
+    expect(mocks.getSessionProfile).not.toHaveBeenCalled();
+    expect(mocks.generateStructuredAi).not.toHaveBeenCalled();
+  });
+
   it("returns a route that includes each supplied event", async () => {
     mocks.generateStructuredAi.mockResolvedValue({
       route: events.map((event, index) => ({

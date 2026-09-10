@@ -8,10 +8,14 @@ import {
 	type SuggestionRequest,
 } from "@/lib/ai/contracts";
 import { friendlyAiError, generateStructuredAi } from "@/lib/ai/client";
+import {
+	readLimitedJsonBody,
+	RequestBodyTooLargeError,
+} from "@/lib/api/requestBody";
 
 export async function POST(req: NextRequest) {
 	try {
-		const requestBody = await req.json().catch(() => null);
+		const requestBody = await readLimitedJsonBody(req);
 		const parsedRequest = suggestionRequestSchema.safeParse(requestBody);
 		if (!parsedRequest.success) {
 			return NextResponse.json(
@@ -81,6 +85,9 @@ Make searchKeyword a concise Eventbrite-style search query for real nearby event
 		assertSuggestionCount(data, numSuggestions);
 		return NextResponse.json(data);
 	} catch (error) {
+		if (error instanceof RequestBodyTooLargeError) {
+			return NextResponse.json({ error: error.message }, { status: 413 });
+		}
 		return NextResponse.json(
 			{ error: friendlyAiError(error, "Failed to generate suggestions. Try again.") },
 			{ status: 500 },
