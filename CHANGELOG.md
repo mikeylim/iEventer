@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Daily Pick Rotation Tests] — 2026-09-10
+
+### Changed
+- Daily Pick interest rotation now uses a true UTC day index, so consecutive dates advance one interest consistently across month and year boundaries.
+
+### Added
+- Added deterministic unit tests for empty interests, same-day stability, consecutive-day advancement, wraparound, and invalid dates.
+
+---
+
 ## [AI Request Size Protection] — 2026-09-09
 
 ### Added

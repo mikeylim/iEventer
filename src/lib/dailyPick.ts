@@ -4,6 +4,7 @@ import { dailyPicks, userInterests, interests, profiles } from "@/db/schema";
 import { and, eq, desc, gte } from "drizzle-orm";
 import { generateStructuredAi } from "./ai/client";
 import { dailyPickSelectionSchema } from "./ai/contracts";
+import { pickInterestForDate } from "./dailyPickRotation";
 import { searchEventbrite, type NormalizedEvent } from "./eventbrite";
 
 export type StoredDailyPick = {
@@ -19,17 +20,6 @@ function todayUtcDateString(): string {
   // YYYY-MM-DD in UTC. Picks reset at midnight UTC.
   // Future improvement: respect user timezone from profile.
   return new Date().toISOString().split("T")[0];
-}
-
-function pickInterestForToday(
-  interestSlugs: string[],
-  date: string
-): string | null {
-  if (interestSlugs.length === 0) return null;
-  // Deterministic rotation: same day picks the same interest, different days
-  // emphasize different ones. Day-of-year hash mod number-of-interests.
-  const dayHash = date.split("-").reduce((acc, part) => acc + parseInt(part), 0);
-  return interestSlugs[dayHash % interestSlugs.length];
 }
 
 export async function getTodaysPick(
@@ -94,7 +84,7 @@ export async function generateDailyPick(
   const location = profileRow.location || "";
 
   // 3. Pick today's emphasized interest, build a search query
-  const todaysInterestSlug = pickInterestForToday(
+  const todaysInterestSlug = pickInterestForDate(
     userInterestRows.map((i) => i.slug),
     today
   );
