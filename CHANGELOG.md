@@ -5,6 +5,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Phase 7 - Context-Aware Outing Discovery] - 2026-09-23
+
+### Added
+- Added a request-specific destination and outing date so users can plan somewhere other than their saved profile location.
+- Added verified parks, attractions, restaurants, and cafes from Geoapify alongside Eventbrite listings.
+- Added Open-Meteo forecast context and deterministic indoor/outdoor ranking for the selected date.
+- Added All, Events, Places, and Food & Drink result views plus reusable place cards and provider attribution.
+
+### Changed
+- Expanded the shared result contract and saved-plan flow so events and flexible-time venues can use the same plan and route optimizer.
+- Kept AI activity ideas visually separate from retrieved options and renamed their action to `Explore Matches`.
+- Limited pagination requests to Eventbrite so loading more events does not consume place or weather quota.
+
+### Tests
+- Added route, normalization, weather-ranking, and place-card regression coverage.
+
+---
+
 ## [Daily Pick Rotation Tests] — 2026-09-10
 
 ### Changed

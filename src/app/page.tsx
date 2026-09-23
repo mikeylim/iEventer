@@ -6,22 +6,10 @@ import {
   getTodaysPick,
   type StoredDailyPick,
 } from "@/lib/dailyPick";
+import type { DiscoveryItem } from "@/lib/discovery";
 
 // Auth-dependent: never cache.
 export const dynamic = "force-dynamic";
-
-interface EventItem {
-  id: string;
-  name: string;
-  description: string;
-  url: string;
-  start: string;
-  category: string;
-  venue: { name: string; city: string; address: string } | null;
-  isFree: boolean;
-  logo: string | null;
-  planEventId?: string;
-}
 
 // Serialize Date fields so we can pass the pick from server → client.
 type SerializedPick = Omit<StoredDailyPick, "seenAt" | "dismissedAt"> & {
@@ -43,7 +31,7 @@ export default async function Home() {
   // Default props for anonymous users
   let planId: string | null = null;
   let initialLocation = "";
-  let initialPlan: EventItem[] = [];
+  let initialPlan: DiscoveryItem[] = [];
   let initialRoutePlan: unknown = null;
   let dailyPick: SerializedPick | null = null;
 
@@ -55,24 +43,41 @@ export default async function Home() {
     initialRoutePlan = plan.optimizedRoute;
 
     const { events } = await getPlanWithEvents(plan.id);
-    initialPlan = events.map((e) => ({
-      id: e.sourceId,
-      name: e.name,
-      description: e.description || "",
-      url: e.url,
-      start: e.startAt ? e.startAt.toISOString() : "",
-      category: e.category || "",
-      venue: e.venueName
-        ? {
-            name: e.venueName,
-            city: "",
-            address: e.venueAddress || "",
-          }
-        : null,
-      isFree: e.isFree,
-      logo: e.imageUrl,
-      planEventId: e.id,
-    }));
+    initialPlan = events.map((e) => {
+      const kind =
+        e.sourceProvider === "geoapify"
+          ? e.category === "Cafe" || e.category === "Restaurant"
+            ? "food"
+            : "place"
+          : "event";
+
+      return {
+        id:
+          e.sourceProvider === "geoapify"
+            ? `geoapify:${e.sourceId}`
+            : e.sourceId,
+        sourceId: e.sourceId,
+        sourceProvider: e.sourceProvider,
+        kind,
+        name: e.name,
+        description: e.description || "",
+        url: e.url,
+        start: e.startAt ? e.startAt.toISOString() : "",
+        category: e.category || "",
+        venue: e.venueName
+          ? {
+              name: e.venueName,
+              city: "",
+              address: e.venueAddress || "",
+            }
+          : null,
+        isFree: e.isFree,
+        logo: e.imageUrl,
+        latitude: e.latitude == null ? undefined : Number(e.latitude),
+        longitude: e.longitude == null ? undefined : Number(e.longitude),
+        planEventId: e.id,
+      };
+    });
 
     // Daily pick — only for users who have completed onboarding.
     if (sessionProfile.profile?.onboardedAt) {

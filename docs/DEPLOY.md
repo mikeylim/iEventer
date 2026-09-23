@@ -41,6 +41,7 @@ npx wrangler secret put GOOGLE_CLIENT_ID
 npx wrangler secret put GOOGLE_CLIENT_SECRET
 npx wrangler secret put GEMINI_API_KEY
 npx wrangler secret put EVENTBRITE_API_KEY
+npx wrangler secret put GEOAPIFY_API_KEY
 npx wrangler secret put CRON_SECRET
 npx wrangler secret put NEXTAUTH_URL  # e.g. https://ieventer.<account>.workers.dev
 npx wrangler secret put AUTH_URL      # same as NEXTAUTH_URL — Auth.js v5 reads either

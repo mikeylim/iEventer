@@ -10,7 +10,7 @@ test.describe("Anonymous home page", () => {
         name: /plan your perfect outing in seconds/i,
       })
     ).toBeVisible();
-    await expect(page.getByText(/real events nearby/i)).toBeVisible();
+    await expect(page.getByText(/real events and places at your destination/i)).toBeVisible();
 
     // The top nav should offer sign-in (since we're not signed in)
     await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
@@ -19,10 +19,10 @@ test.describe("Anonymous home page", () => {
     await expect(page.getByText(/Today's Surprise Pick/i)).toHaveCount(0);
   });
 
-  test("the find-something-fun button requires input", async ({ page }) => {
+  test("the outing button requires an idea and destination", async ({ page }) => {
     await page.goto("/");
 
-    const submit = page.getByRole("button", { name: /find something fun/i });
+    const submit = page.getByRole("button", { name: /build my outing/i });
     await expect(submit).toBeVisible();
     await expect(submit).toBeDisabled();
   });
@@ -32,8 +32,9 @@ test.describe("Anonymous home page", () => {
 
     const textarea = page.getByPlaceholder(/I'm bored/i);
     await textarea.fill("I want to do something outdoors this weekend");
+    await page.getByPlaceholder(/Downtown Toronto/i).fill("High Park, Toronto");
 
-    const submit = page.getByRole("button", { name: /find something fun/i });
+    const submit = page.getByRole("button", { name: /build my outing/i });
     await expect(submit).toBeEnabled();
   });
 
@@ -45,8 +46,9 @@ test.describe("Anonymous home page", () => {
 
     await page.getByRole("button", { name: /Chill/i }).click();
     await page.getByRole("button", { name: /Outdoor/i }).click();
+    await page.getByPlaceholder(/Downtown Toronto/i).fill("Downtown Toronto");
 
-    const submit = page.getByRole("button", { name: /find something fun/i });
+    const submit = page.getByRole("button", { name: /build my outing/i });
     await expect(submit).toBeEnabled();
   });
 
@@ -81,6 +83,9 @@ test.describe("Anonymous home page", () => {
           events: [
             {
               id: "free-market",
+              sourceId: "free-market",
+              kind: "event",
+              sourceProvider: "eventbrite",
               name: "Free Community Market",
               description: "A neighborhood market.",
               url: "https://example.com/free-market",
@@ -96,6 +101,9 @@ test.describe("Anonymous home page", () => {
             },
             {
               id: "paid-concert",
+              sourceId: "paid-concert",
+              kind: "event",
+              sourceProvider: "eventbrite",
               name: "Evening Concert",
               description: "Live music downtown.",
               url: "https://example.com/paid-concert",
@@ -110,6 +118,40 @@ test.describe("Anonymous home page", () => {
               logo: null,
             },
           ],
+          places: [
+            {
+              id: "geoapify:cafe-1",
+              sourceId: "cafe-1",
+              kind: "food",
+              sourceProvider: "geoapify",
+              name: "Market Cafe",
+              description: "Cafe",
+              url: "https://example.com/cafe",
+              start: "",
+              category: "Cafe",
+              venue: {
+                name: "Market Cafe",
+                city: "Toronto",
+                address: "3 King Street",
+              },
+              isFree: false,
+              logo: null,
+              setting: "indoor",
+              distanceMeters: 350,
+            },
+          ],
+          weather: {
+            date: "2026-09-26",
+            condition: "Clear sky",
+            weatherCode: 0,
+            temperatureMin: 12,
+            temperatureMax: 21,
+            precipitationProbability: 5,
+            windSpeedMax: 15,
+            outdoorFriendly: true,
+          },
+          resolvedLocation: "Downtown Toronto, ON, Canada",
+          providers: { events: "ready", places: "ready", weather: "ready" },
           continuation: null,
         },
       });
@@ -117,8 +159,9 @@ test.describe("Anonymous home page", () => {
 
     await page.goto("/");
     await page.getByPlaceholder(/I'm bored/i).fill("Find a market");
-    await page.getByRole("button", { name: /find something fun/i }).click();
-    await page.getByRole("button", { name: /find events/i }).click();
+    await page.getByPlaceholder(/Downtown Toronto/i).fill("Downtown Toronto");
+    await page.getByRole("button", { name: /build my outing/i }).click();
+    await page.getByRole("tab", { name: /events/i }).click();
 
     const priceFilters = page.getByRole("group", { name: /price/i });
     const anyPrice = priceFilters.getByRole("button", { name: "Any Price" });
@@ -134,6 +177,10 @@ test.describe("Anonymous home page", () => {
     await expect(free).toHaveAttribute("aria-pressed", "true");
     await expect(anyPrice).toHaveAttribute("aria-pressed", "false");
     await expect(page.getByText("Showing 1 of 2 events")).toBeVisible();
+
+    await page.getByRole("tab", { name: /^all/i }).click();
+    await expect(page.getByText("Free Community Market")).toBeVisible();
+    await expect(page.getByText("Evening Concert")).toBeVisible();
   });
 
   test("API errors are exposed as alerts", async ({ page }) => {
@@ -143,10 +190,23 @@ test.describe("Anonymous home page", () => {
         json: { error: "Suggestions are temporarily unavailable." },
       });
     });
+    await page.route("**/api/discover?**", async (route) => {
+      await route.fulfill({
+        json: {
+          events: [],
+          places: [],
+          weather: null,
+          continuation: null,
+          resolvedLocation: "Toronto",
+          providers: { events: "ready", places: "ready", weather: "unavailable" },
+        },
+      });
+    });
 
     await page.goto("/");
     await page.getByPlaceholder(/I'm bored/i).fill("Find something outdoors");
-    await page.getByRole("button", { name: /find something fun/i }).click();
+    await page.getByPlaceholder(/Downtown Toronto/i).fill("Toronto");
+    await page.getByRole("button", { name: /build my outing/i }).click();
 
     await expect(
       page

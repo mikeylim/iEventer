@@ -29,10 +29,10 @@ export interface Suggestion {
 
 export function AISuggestionCard({
 	suggestion,
-	onFindEvents,
+	onExploreMatches,
 }: {
 	suggestion: Suggestion;
-	onFindEvents: (keyword: string) => void;
+	onExploreMatches: (keyword: string) => void;
 }) {
 	const [expanded, setExpanded] = useState(false);
 	const stepsId = useId();
@@ -119,9 +119,9 @@ export function AISuggestionCard({
 						</>
 					)}
 				</Button>
-				<Button size="sm" onClick={() => onFindEvents(s.searchKeyword)} className="flex-1">
+				<Button size="sm" onClick={() => onExploreMatches(s.searchKeyword)} className="flex-1">
 					<Search className="w-4 h-4" />
-					Find Events
+					Explore Matches
 				</Button>
 			</div>
 		</article>

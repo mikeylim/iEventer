@@ -11,6 +11,9 @@ import {
   SlidersHorizontal,
   RotateCcw,
   CalendarDays,
+  Compass,
+  Landmark,
+  UtensilsCrossed,
 } from "lucide-react";
 import {
   addEventToPlan,
@@ -28,8 +31,10 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { DailyPickCard } from "@/components/DailyPickCard";
+import { PlaceCard } from "@/components/PlaceCard";
 import { SamplePlanPreview } from "@/components/SamplePlanPreview";
 import { MyPlanFAB } from "@/components/MyPlanFAB";
+import { WeatherContext } from "@/components/WeatherContext";
 import {
   EventCard,
   type EventItem,
@@ -44,6 +49,11 @@ import {
 } from "@/components/RouteTimelineNode";
 import { cn } from "@/lib/utils";
 import { formatEventDate } from "@/lib/format";
+import type {
+  DiscoveryItem,
+  DiscoveryKind,
+  WeatherSummary,
+} from "@/lib/discovery";
 
 import {
   WHEN_FILTERS,
@@ -114,6 +124,7 @@ const PREFERENCE_GROUPS = [
 ] as const;
 
 type DiscoveryMode = "prompt" | "vibes";
+type DiscoveryView = "all" | DiscoveryKind;
 type PreferenceKey = (typeof PREFERENCE_GROUPS)[number]["key"];
 type SelectedPreferences = Record<PreferenceKey, string[]>;
 
@@ -122,6 +133,19 @@ function createEmptyPreferences(): SelectedPreferences {
     acc[group.key] = [];
     return acc;
   }, {} as SelectedPreferences);
+}
+
+function getTodayInputValue(): string {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function getMaxForecastDate(): string {
+  const maxDate = new Date();
+  maxDate.setDate(maxDate.getDate() + 15);
+  const offset = maxDate.getTimezoneOffset() * 60_000;
+  return new Date(maxDate.getTime() - offset).toISOString().slice(0, 10);
 }
 
 // ─── Types ────────────────────────────────────────────────────
@@ -164,6 +188,7 @@ export default function HomeClient({
 }: HomeClientProps) {
   const [prompt, setPrompt] = useState("");
   const [location, setLocation] = useState(initialLocation);
+  const [outingDate, setOutingDate] = useState(getTodayInputValue);
   const [discoveryMode, setDiscoveryMode] =
     useState<DiscoveryMode>("prompt");
   const [selectedPreferences, setSelectedPreferences] =
@@ -171,6 +196,13 @@ export default function HomeClient({
 
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [places, setPlaces] = useState<DiscoveryItem[]>([]);
+  const [weather, setWeather] = useState<WeatherSummary | null>(null);
+  const [resolvedLocation, setResolvedLocation] = useState("");
+  const [discoveryView, setDiscoveryView] = useState<DiscoveryView>("all");
+  const [placeProviderStatus, setPlaceProviderStatus] = useState<
+    "ready" | "unavailable" | "unconfigured" | null
+  >(null);
   const [loading, setLoading] = useState(false);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -220,7 +252,9 @@ export default function HomeClient({
         if (values.length > 0) acc[group.key] = values;
         return acc;
       },
-      location.trim() ? { location: location.trim() } : {}
+      location.trim()
+        ? { location: location.trim(), date: outingDate }
+        : { date: outingDate }
     );
   }
 
@@ -235,8 +269,8 @@ export default function HomeClient({
       startTransition(async () => {
         try {
           const saved = await addEventToPlan(planId, {
-            sourceProvider: "eventbrite",
-            sourceId: e.id,
+            sourceProvider: e.sourceProvider,
+            sourceId: e.sourceId,
             name: e.name,
             description: e.description,
             url: e.url,
@@ -246,6 +280,10 @@ export default function HomeClient({
             category: e.category || null,
             isFree: e.isFree,
             imageUrl: e.logo || null,
+            latitude:
+              typeof e.latitude === "number" ? String(e.latitude) : null,
+            longitude:
+              typeof e.longitude === "number" ? String(e.longitude) : null,
           });
           setPlan((prev) =>
             prev.map((p) =>
@@ -289,7 +327,21 @@ export default function HomeClient({
       const res = await fetch("/api/optimize-route", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ events: plan, location }),
+        body: JSON.stringify({
+          events: plan.map((item) => ({
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            url: item.url,
+            start: item.start,
+            category: item.category,
+            venue: item.venue,
+            isFree: item.isFree,
+            logo: item.logo,
+            planEventId: item.planEventId,
+          })),
+          location,
+        }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -311,15 +363,19 @@ export default function HomeClient({
     setLoading(true);
     setError("");
     setSuggestions([]);
-    setEvents([]);
-    setEventsContinuation(null);
 
     const body: Record<string, unknown> = {};
     const trimmedPrompt = prompt.trim();
     const preferences = buildPreferencesBody();
+    const discoveryQuery =
+      trimmedPrompt ||
+      Object.values(selectedPreferences)
+        .flat()
+        .join(" ") ||
+      "things to do";
 
     if (discoveryMode === "prompt" && trimmedPrompt) {
-      body.prompt = `${trimmedPrompt}${location ? `. I'm in/near ${location}` : ""}`;
+      body.prompt = `${trimmedPrompt}. Destination: ${location}. Date: ${outingDate}.`;
     }
     if (discoveryMode === "vibes" && hasSelectedPreferences) {
       body.preferences = preferences;
@@ -327,26 +383,55 @@ export default function HomeClient({
 
     lastPromptBody.current = body;
 
-    try {
-      const res = await fetch("/api/suggest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      const nextSuggestions = data.suggestions || [];
-      setSuggestions(nextSuggestions);
-      setStatusMessage(
-        nextSuggestions.length > 0
-          ? `${nextSuggestions.length} AI ideas generated.`
-          : "No AI ideas were found. Try changing your request."
+    const suggestionRequest = fetch("/api/suggest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(async (response) => {
+      const data = await response.json();
+      if (!response.ok || data.error) {
+        throw new Error(data.error || "Failed to generate AI ideas");
+      }
+      return (data.suggestions || []) as Suggestion[];
+    });
+
+    const [suggestionResult, discoveryResult] = await Promise.allSettled([
+      suggestionRequest,
+      fetchDiscovery(discoveryQuery, false),
+    ]);
+    const errors: string[] = [];
+
+    if (suggestionResult.status === "fulfilled") {
+      setSuggestions(suggestionResult.value);
+    } else {
+      errors.push(
+        suggestionResult.reason instanceof Error
+          ? suggestionResult.reason.message
+          : "Failed to generate AI ideas"
       );
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setLoading(false);
     }
+
+    if (discoveryResult.status === "rejected") {
+      errors.push(
+        discoveryResult.reason instanceof Error
+          ? discoveryResult.reason.message
+          : "Failed to discover nearby options"
+      );
+    }
+
+    setError(errors.join(" "));
+    const suggestionCount =
+      suggestionResult.status === "fulfilled"
+        ? suggestionResult.value.length
+        : 0;
+    const discoveryCount =
+      discoveryResult.status === "fulfilled"
+        ? discoveryResult.value.total
+        : 0;
+    setStatusMessage(
+      `${suggestionCount} AI ideas and ${discoveryCount} verified options found.`
+    );
+    setLoading(false);
   }
 
   async function loadMoreSuggestions() {
@@ -380,48 +465,64 @@ export default function HomeClient({
     }
   }
 
-  const fetchEvents = useCallback(
-    async (keyword: string) => {
+  const fetchDiscovery = useCallback(
+    async (keyword: string, scrollToResults = true) => {
       setEventsLoading(true);
-      setError("");
       setEvents([]);
+      setPlaces([]);
+      setWeather(null);
+      setResolvedLocation("");
+      setPlaceProviderStatus(null);
       setEventsContinuation(null);
       setEventsQuery(keyword);
+      setDiscoveryView("all");
       try {
-        const params = new URLSearchParams({ q: keyword, page_size: "10" });
-        if (location) params.set("location", location);
+        const params = new URLSearchParams({
+          q: keyword,
+          page_size: "10",
+          location: location.trim(),
+          date: outingDate,
+        });
         const res = await fetch(`/api/discover?${params.toString()}`);
         const data = await res.json();
         if (!res.ok || data.error) {
-          throw new Error(data.error || "Failed to load nearby events");
+          throw new Error(data.error || "Failed to discover nearby options");
         }
         const nextEvents = data.events || [];
+        const nextPlaces = data.places || [];
         setEvents(nextEvents);
+        setPlaces(nextPlaces);
+        setWeather(data.weather || null);
+        setResolvedLocation(data.resolvedLocation || location.trim());
+        setPlaceProviderStatus(data.providers?.places || null);
         setEventsContinuation(data.continuation || null);
-        setStatusMessage(
-          nextEvents.length > 0
-            ? `${nextEvents.length} nearby events found.`
-            : "No nearby events were found."
-        );
-        setTimeout(() => {
-          eventsSectionRef.current?.scrollIntoView({
-            behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
-              .matches
-              ? "auto"
-              : "smooth",
-            block: "start",
-          });
-        }, 100);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to load nearby events"
-        );
+        if (scrollToResults) {
+          setTimeout(() => {
+            eventsSectionRef.current?.scrollIntoView({
+              behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+                .matches
+                ? "auto"
+                : "smooth",
+              block: "start",
+            });
+          }, 100);
+        }
+        return { total: nextEvents.length + nextPlaces.length };
       } finally {
         setEventsLoading(false);
       }
     },
-    [location]
+    [location, outingDate]
   );
+
+  function exploreMatches(keyword: string) {
+    setError("");
+    void fetchDiscovery(keyword).catch((err) => {
+      setError(
+        err instanceof Error ? err.message : "Failed to discover nearby options"
+      );
+    });
+  }
 
   async function loadMoreEvents() {
     if (!eventsContinuation || eventsLoadingMore) return;
@@ -432,8 +533,10 @@ export default function HomeClient({
         q: eventsQuery,
         page_size: "10",
         continuation: eventsContinuation,
+        location: location.trim(),
+        date: outingDate,
+        scope: "events",
       });
-      if (location) params.set("location", location);
       const res = await fetch(`/api/discover?${params.toString()}`);
       const data = await res.json();
       if (!res.ok || data.error) {
@@ -457,18 +560,35 @@ export default function HomeClient({
   }
 
   const canSubmit =
-    discoveryMode === "prompt"
+    location.trim().length > 0 &&
+    (discoveryMode === "prompt"
       ? prompt.trim().length > 0
-      : hasSelectedPreferences;
+      : hasSelectedPreferences);
 
   const filteredByWhen = filterByWhen(events, whenFilter);
   const filteredByPrice = filterByPrice(filteredByWhen, priceFilter);
   const filteredByCategory = filterByCategory(filteredByPrice, categoryFilter);
+  const sortedEvents = [...events].sort(
+    (a, b) =>
+      new Date(a.start || "9999").getTime() -
+      new Date(b.start || "9999").getTime()
+  );
   const displayEvents = [...filteredByCategory].sort(
     (a, b) =>
       new Date(a.start || "9999").getTime() -
       new Date(b.start || "9999").getTime()
   );
+  const displayPlaces = places.filter((item) => item.kind === "place");
+  const displayFood = places.filter((item) => item.kind === "food");
+  const displayItems: DiscoveryItem[] =
+    discoveryView === "event"
+      ? displayEvents
+      : discoveryView === "place"
+        ? displayPlaces
+        : discoveryView === "food"
+          ? displayFood
+          : [...sortedEvents, ...places];
+  const hasDiscoveryResults = events.length > 0 || places.length > 0;
 
   const availableCategories = [
     ...new Set(events.map((e) => e.category).filter(Boolean)),
@@ -502,8 +622,8 @@ export default function HomeClient({
               </h1>
               <p className="text-lg text-muted-foreground leading-relaxed">
                 Tell us what you&apos;re in the mood for. We&apos;ll find
-                real events nearby, suggest creative ideas, and build an
-                optimized route — all in one place.
+                real events and places at your destination, account for the
+                forecast, and build one flexible plan.
               </p>
               <p className="text-sm text-muted-foreground/80">
                 Try it right below — no sign-in needed to start.
@@ -516,25 +636,45 @@ export default function HomeClient({
 
       {/* Discovery input */}
       <section>
-        <div className="bg-card rounded-2xl border border-border p-6 space-y-4 max-w-3xl mx-auto">
-          <div>
-            <label
-              htmlFor="discovery-location"
-              className="text-sm font-medium mb-2 block"
-            >
-              📍 Where are you?
-            </label>
-            <div className="relative">
-              <MapPin
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
-                aria-hidden="true"
-              />
+        <div className="bg-card rounded-lg border border-border p-6 space-y-4 max-w-3xl mx-auto">
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_11rem]">
+            <div>
+              <label
+                htmlFor="discovery-location"
+                className="text-sm font-medium mb-2 block"
+              >
+                📍 Where do you want to go?
+              </label>
+              <div className="relative">
+                <MapPin
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <Input
+                  id="discovery-location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Downtown Toronto, ON"
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label
+                htmlFor="outing-date"
+                className="text-sm font-medium mb-2 block"
+              >
+                📅 Outing date
+              </label>
               <Input
-                id="discovery-location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Toronto, ON"
-                className="pl-10"
+                id="outing-date"
+                type="date"
+                value={outingDate}
+                min={getTodayInputValue()}
+                max={getMaxForecastDate()}
+                onChange={(event) => setOutingDate(event.target.value)}
+                required
               />
             </div>
           </div>
@@ -630,12 +770,12 @@ export default function HomeClient({
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Finding fun stuff...
+                Building your outing...
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                Find Something Fun
+                Build My Outing
               </>
             )}
           </Button>
@@ -665,7 +805,7 @@ export default function HomeClient({
               My Plan
             </h2>
             <Badge variant="secondary">
-              {plan.length} event{plan.length === 1 ? "" : "s"}
+              {plan.length} stop{plan.length === 1 ? "" : "s"}
             </Badge>
           </div>
 
@@ -729,7 +869,7 @@ export default function HomeClient({
 
           {plan.length === 1 && !routePlan && (
             <p className="text-sm text-center text-muted-foreground">
-              Add at least 2 events to optimize your route.
+              Add at least 2 stops to optimize your route.
             </p>
           )}
 
@@ -794,7 +934,7 @@ export default function HomeClient({
               </h2>
               <p className="text-muted-foreground">
                 Creative ways to spend your time, matched to your request and
-                interests. Use Find Events to turn an idea into real listings.
+                interests. Use Explore Matches to find verified events and places.
               </p>
             </div>
           </div>
@@ -804,7 +944,7 @@ export default function HomeClient({
               <AISuggestionCard
                 key={i}
                 suggestion={s}
-                onFindEvents={fetchEvents}
+                onExploreMatches={exploreMatches}
               />
             ))}
           </div>
@@ -829,7 +969,7 @@ export default function HomeClient({
         </section>
       )}
 
-      {/* Events */}
+      {/* Verified discovery results */}
       <div ref={eventsSectionRef} className="scroll-mt-24" aria-hidden="true" />
       {eventsLoading && (
         <div
@@ -838,32 +978,91 @@ export default function HomeClient({
           className="text-center py-10 text-muted-foreground flex items-center justify-center gap-2"
         >
           <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
-          Searching nearby events...
+          Searching events and places at your destination...
         </div>
       )}
 
-      {events.length > 0 && (
+      {(hasDiscoveryResults || placeProviderStatus) && !eventsLoading && (
         <section className="space-y-6 animate-fade-in">
           <div className="flex items-start gap-3 border-l-4 border-secondary pl-4">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary/15 text-secondary">
-              <CalendarDays className="size-5" aria-hidden="true" />
+              <Compass className="size-5" aria-hidden="true" />
             </span>
             <div>
               <p className="mb-1 text-sm font-semibold text-foreground">
-                Real Eventbrite listings
+                Verified options for your outing
               </p>
               <h2 className="font-display text-2xl mb-1">
-                Events Happening Near You
+                Explore {resolvedLocation || location}
               </h2>
               <p className="text-muted-foreground">
-                Scheduled events you can open, book, and add to your plan,
-                filterable by when, price, and category.
+                Compare scheduled events, places, restaurants, and cafes for
+                the destination and date you chose.
               </p>
             </div>
           </div>
 
+          {weather && (
+            <WeatherContext
+              weather={weather}
+              destination={resolvedLocation || location}
+            />
+          )}
+
+          <div
+            role="tablist"
+            aria-label="Discovery categories"
+            className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+          >
+            {([
+              {
+                value: "all",
+                label: "All",
+                icon: Compass,
+                count: events.length + places.length,
+              },
+              {
+                value: "event",
+                label: "Events",
+                icon: CalendarDays,
+                count: events.length,
+              },
+              {
+                value: "place",
+                label: "Places",
+                icon: Landmark,
+                count: displayPlaces.length,
+              },
+              {
+                value: "food",
+                label: "Food & Drink",
+                icon: UtensilsCrossed,
+                count: displayFood.length,
+              },
+            ] as const).map((tab) => {
+              const TabIcon = tab.icon;
+              return (
+                <Button
+                  key={tab.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={discoveryView === tab.value}
+                  aria-controls="discovery-results"
+                  variant={discoveryView === tab.value ? "default" : "outline"}
+                  onClick={() => setDiscoveryView(tab.value)}
+                  className="min-w-0 justify-center"
+                >
+                  <TabIcon className="size-4 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{tab.label}</span>
+                  <span className="text-xs opacity-75">{tab.count}</span>
+                </Button>
+              );
+            })}
+          </div>
+
           {/* Filters */}
-          <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+          {discoveryView === "event" && events.length > 0 && (
+            <div className="bg-card rounded-lg border border-border p-4 space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Filter className="w-4 h-4" aria-hidden="true" />
               Filters
@@ -982,47 +1181,106 @@ export default function HomeClient({
                 </Button>
               </div>
             )}
+            </div>
+          )}
+
+          {/* Discovery grid */}
+          <div
+            id="discovery-results"
+            role="tabpanel"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {displayItems.map((item) =>
+              item.kind === "event" ? (
+                <EventCard
+                  key={item.id}
+                  event={item}
+                  onAddToPlan={addToPlan}
+                  isInPlan={planIds.has(item.id)}
+                />
+              ) : (
+                <PlaceCard
+                  key={item.id}
+                  item={item}
+                  onAddToPlan={addToPlan}
+                  isInPlan={planIds.has(item.id)}
+                />
+              )
+            )}
           </div>
 
-          {/* Event grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {displayEvents.map((e) => (
-              <EventCard
-                key={e.id}
-                event={e}
-                onAddToPlan={addToPlan}
-                isInPlan={planIds.has(e.id)}
-              />
-            ))}
-          </div>
-
-          {displayEvents.length === 0 && events.length > 0 && (
+          {displayItems.length === 0 && (
             <p
               role="status"
               className="text-center text-sm text-muted-foreground py-4"
             >
-              No events match your filters. Try adjusting or clearing them.
+              No{" "}
+              {discoveryView === "all"
+                ? "options"
+                : discoveryView === "event"
+                  ? "events"
+                  : discoveryView === "place"
+                    ? "places"
+                    : "food and drink options"}{" "}
+              were found for this search.
             </p>
           )}
 
-          {eventsContinuation && (
-            <div className="text-center pt-4">
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={loadMoreEvents}
-                disabled={eventsLoadingMore}
+          {placeProviderStatus === "unconfigured" && (
+            <p className="text-center text-xs text-muted-foreground">
+              Place and food results are not configured yet. Event results remain available.
+            </p>
+          )}
+
+          {placeProviderStatus === "unavailable" && (
+            <p className="text-center text-xs text-muted-foreground">
+              Place and food results are temporarily unavailable.
+            </p>
+          )}
+
+          {eventsContinuation &&
+            (discoveryView === "all" || discoveryView === "event") && (
+              <div className="text-center pt-4">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={loadMoreEvents}
+                  disabled={eventsLoadingMore}
+                >
+                  {eventsLoadingMore ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading more...
+                    </>
+                  ) : (
+                    "Load More Events"
+                  )}
+                </Button>
+              </div>
+            )}
+
+          {places.length > 0 && (
+            <p className="text-center text-xs text-muted-foreground">
+              Place data by{" "}
+              <a
+                className="underline underline-offset-2"
+                href="https://www.geoapify.com/"
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                {eventsLoadingMore ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Loading more...
-                  </>
-                ) : (
-                  "Load More Events"
-                )}
-              </Button>
-            </div>
+                Geoapify
+              </a>{" "}
+              and{" "}
+              <a
+                className="underline underline-offset-2"
+                href="https://www.openstreetmap.org/copyright"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                OpenStreetMap contributors
+              </a>
+              .
+            </p>
           )}
         </section>
       )}

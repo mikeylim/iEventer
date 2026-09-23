@@ -24,6 +24,7 @@ export const discoveryPreferencesSchema = z
     setting: preferenceListSchema.optional(),
     timing: preferenceListSchema.optional(),
     location: nonEmptyText(200).optional(),
+    date: z.string().date().optional(),
   })
   .strict();
 

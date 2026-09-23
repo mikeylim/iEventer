@@ -27,7 +27,7 @@ function makeSuggestion(overrides: Partial<Suggestion> = {}): Suggestion {
 
 describe("AISuggestionCard", () => {
   it("renders the title, emoji, and description", () => {
-    render(<AISuggestionCard suggestion={makeSuggestion()} onFindEvents={() => {}} />);
+    render(<AISuggestionCard suggestion={makeSuggestion()} onExploreMatches={() => {}} />);
     expect(screen.getByText("AI idea")).toBeInTheDocument();
     expect(screen.getByText("Try Indoor Bouldering")).toBeInTheDocument();
     expect(screen.getByText("🧗")).toBeInTheDocument();
@@ -35,7 +35,7 @@ describe("AISuggestionCard", () => {
   });
 
   it("shows only cost and duration in the compact details", () => {
-    render(<AISuggestionCard suggestion={makeSuggestion()} onFindEvents={() => {}} />);
+    render(<AISuggestionCard suggestion={makeSuggestion()} onExploreMatches={() => {}} />);
     expect(screen.getByText("$20-30")).toBeInTheDocument();
     expect(screen.getByText("2 hours")).toBeInTheDocument();
     expect(screen.queryByText("Beginner")).not.toBeInTheDocument();
@@ -43,14 +43,14 @@ describe("AISuggestionCard", () => {
   });
 
   it("starts collapsed: steps are not visible by default", () => {
-    render(<AISuggestionCard suggestion={makeSuggestion()} onFindEvents={() => {}} />);
+    render(<AISuggestionCard suggestion={makeSuggestion()} onExploreMatches={() => {}} />);
     expect(screen.queryByText(/How to do it:/)).not.toBeInTheDocument();
     expect(screen.queryByText("Rent shoes at the front desk")).not.toBeInTheDocument();
   });
 
   it("expands to show the step list when 'How to do it' is clicked", async () => {
     const user = userEvent.setup();
-    render(<AISuggestionCard suggestion={makeSuggestion()} onFindEvents={() => {}} />);
+    render(<AISuggestionCard suggestion={makeSuggestion()} onExploreMatches={() => {}} />);
     const disclosure = screen.getByRole("button", { name: /how to do it/i });
     expect(disclosure).toHaveAttribute("aria-expanded", "false");
 
@@ -62,13 +62,13 @@ describe("AISuggestionCard", () => {
     expect(document.getElementById(disclosure.getAttribute("aria-controls")!)).toBeInTheDocument();
   });
 
-  it("fires onFindEvents with the search keyword when the button is clicked", async () => {
+  it("explores verified matches using the suggestion keyword", async () => {
     const user = userEvent.setup();
     const onFind = vi.fn();
     render(
-      <AISuggestionCard suggestion={makeSuggestion()} onFindEvents={onFind} />
+      <AISuggestionCard suggestion={makeSuggestion()} onExploreMatches={onFind} />
     );
-    await user.click(screen.getByRole("button", { name: /find events/i }));
+    await user.click(screen.getByRole("button", { name: /explore matches/i }));
     expect(onFind).toHaveBeenCalledWith("bouldering");
   });
 });

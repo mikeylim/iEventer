@@ -5,19 +5,9 @@ import { Calendar, MapPin, Plus, Check, TicketCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatEventDate } from "@/lib/format";
+import type { DiscoveryItem } from "@/lib/discovery";
 
-export interface EventItem {
-  id: string;
-  name: string;
-  description: string;
-  url: string;
-  start: string;
-  category: string;
-  venue: { name: string; city: string; address: string } | null;
-  isFree: boolean;
-  logo: string | null;
-  planEventId?: string;
-}
+export type EventItem = DiscoveryItem;
 
 export function EventCard({
   event,

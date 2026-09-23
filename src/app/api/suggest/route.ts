@@ -108,7 +108,8 @@ function describePreferences(preferences: SuggestionRequest["preferences"]): str
 		budget: "Budget",
 		setting: "Setting",
 		timing: "Timing",
-		location: "Location",
+		location: "Destination",
+		date: "Outing date",
 	};
 
 	return Object.entries(preferences)

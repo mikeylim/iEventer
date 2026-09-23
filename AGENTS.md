@@ -27,7 +27,7 @@ Mike is a junior full-stack web developer actively looking for developer roles. 
 - Auth.js / NextAuth v5 with Google OAuth, JWT sessions, Drizzle adapter
 - Drizzle ORM with Supabase Postgres
 - Gemini API for AI suggestions, route optimization, and daily-pick reasoning
-- Eventbrite Destination Search API plus Nominatim geocoding
+- Eventbrite Destination Search, Geoapify Places/geocoding, Open-Meteo weather, and Nominatim fallback geocoding
 - Cloudflare Workers deployment through `@opennextjs/cloudflare`
 - Vitest, React Testing Library, Playwright, GitHub Actions CI
 
@@ -40,6 +40,8 @@ Mike is a junior full-stack web developer actively looking for developer roles. 
 - Production uses JWT sessions. Do not reintroduce database sessions unless the Cloudflare runtime constraints are deliberately revisited.
 - `src/proxy.ts` was removed because Next.js 16 middleware/proxy constraints and OpenNext Cloudflare support made it unsuitable here. Keep auth gating in pages/server components unless current Next/OpenNext docs say otherwise.
 - Event search endpoint is `/api/discover`, not `/api/events`, because `/api/events` was blocked by browser ad blockers in production.
+- Discovery destinations and dates are request-specific. Profile location may prefill the destination but must not restrict or silently overwrite it.
+- `/api/discover` normalizes Eventbrite and Geoapify results as `DiscoveryItem`; Open-Meteo weather provides deterministic ranking context.
 - Plan data is persisted through `src/lib/plans.ts`; routes are cached on the plan row after optimization.
 - Daily picks live in `src/lib/dailyPick.ts` and `/api/cron/daily-picks`; Cloudflare Cron wiring is still a follow-up.
 - Gemini JSON parsing should go through `src/lib/parseAiJson.ts`, not raw `JSON.parse`.
@@ -49,7 +51,7 @@ Mike is a junior full-stack web developer actively looking for developer roles. 
 Working:
 - Google sign-in and onboarding with interest selection.
 - AI activity suggestions conditioned on profile data.
-- Real Eventbrite events with filtering and pagination.
+- Real Eventbrite events plus Geoapify places and food/drink, with weather-aware discovery views.
 - Saved plans with optimistic add/remove, plan detail pages, and route optimization.
 - Daily Surprise Pick with regenerate, dismiss, seen, and add-to-plan flows.
 - Light/dark theme support.
@@ -57,7 +59,7 @@ Working:
 
 Primary roadmap:
 - Phase 6: finish README/portfolio assets, screenshots, and golden-path GIF.
-- Phase 7: multi-source event aggregation, likely Lu.ma and Ticketmaster, with a unified normalized event model.
+- Discovery follow-up: grounded Gemini reranking of retrieved candidates with a small evaluation dataset.
 - Phase 9: mobile and accessibility QA pass.
 
 Deferred agenda to mention naturally when the user asks "what's next":

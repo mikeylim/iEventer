@@ -37,19 +37,20 @@ Live at [ieventer.mikedohyunlim.workers.dev](https://ieventer.mikedohyunlim.work
 
 ---
 
-## 🚀 Next: Phase 7 — Multi-source Event Aggregation (Option C)
+## ✅ Phase 7 — Context-Aware Outing Discovery (DONE 2026-09-23)
 
-**Goal:** Live up to the value prop ("aggregate events from multiple sources").
+**Goal:** Expand beyond event-only search without turning iEventer into an unfocused directory.
 
-**Tasks:**
-- [ ] Add **Lu.ma API** integration (tech meetups, hackathons)
-- [ ] Add **Ticketmaster Discovery API** (concerts, sports, big shows)
-- [ ] Define unified `NormalizedEvent` interface across sources (already started in `src/lib/eventbrite.ts`)
-- [ ] Parallel-fetch all sources, dedupe by name + date + venue
-- [ ] Add source provider badge on event cards
-- [ ] Update `/api/discover` to query all sources and merge results
+**Tasks shipped:**
+- [x] Make destination and outing date request-specific; profile location is prefill only
+- [x] Define a unified `DiscoveryItem` model for events, places, and food/drink
+- [x] Retrieve real attractions, parks, restaurants, and cafes from Geoapify
+- [x] Retrieve Open-Meteo forecasts and rank indoor/outdoor places against conditions
+- [x] Add All / Events / Places / Food & Drink result views
+- [x] Reuse saved plans and route optimization for every discovery type
+- [x] Keep event pagination isolated so it does not spend place/weather API quota
 
-**Estimated:** 1–2 days
+**Next discovery follow-up:** Ground Gemini ranking against retrieved candidate IDs, then evaluate recommendation relevance before adding another listing provider.
 
 ---
 

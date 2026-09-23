@@ -1,33 +1,21 @@
-// Eventbrite + geocoding helpers — shared between API routes and server libs.
+// Eventbrite helpers shared between API routes and server libraries.
 
-export type NormalizedEvent = {
-  id: string;
-  name: string;
-  description: string;
-  url: string;
-  start: string;
-  category: string;
-  venue: { name: string; city: string; address: string } | null;
-  isFree: boolean;
-  logo: string | null;
+import type { Coordinates, DiscoveryItem } from "@/lib/discovery";
+import { resolveLocation } from "@/lib/location";
+
+export type NormalizedEvent = DiscoveryItem & {
+  kind: "event";
+  sourceProvider: "eventbrite";
 };
 
 export async function geocode(
   location: string
 ): Promise<{ latitude: number; longitude: number } | null> {
-  if (!location) return null;
   try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`,
-      { headers: { "User-Agent": "iEventer/1.0" } }
-    );
-    const data = await res.json();
-    if (data.length > 0) {
-      return {
-        latitude: parseFloat(data[0].lat),
-        longitude: parseFloat(data[0].lon),
-      };
-    }
+    const resolved = await resolveLocation(location);
+    return resolved
+      ? { latitude: resolved.latitude, longitude: resolved.longitude }
+      : null;
   } catch (e) {
     console.error("Geocode error:", e);
   }
@@ -62,6 +50,7 @@ export type EventbriteSearchOptions = {
   pageSize?: number;
   continuation?: string;
   radiusKm?: number;
+  coordinates?: Coordinates;
 };
 
 export type EventbriteSearchResult = {
@@ -91,7 +80,7 @@ export async function searchEventbrite(
   }
 
   if (opts.location) {
-    const coords = await geocode(opts.location);
+    const coords = opts.coordinates || (await geocode(opts.location));
     if (coords) {
       eventSearch.point_radius = {
         latitude: coords.latitude,
@@ -147,6 +136,9 @@ export async function searchEventbrite(
 
       return {
         id: String(e.id || e.eid || ""),
+        sourceId: String(e.id || e.eid || ""),
+        kind: "event",
+        sourceProvider: "eventbrite",
         name: (e.name as string) || "Untitled Event",
         description: ((e.summary as string) || "").slice(0, 200),
         url: (e.url as string) || "",

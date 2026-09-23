@@ -6,6 +6,9 @@ import { EventCard, type EventItem } from "./EventCard";
 function makeEvent(overrides: Partial<EventItem> = {}): EventItem {
   return {
     id: "evt-1",
+    sourceId: "evt-1",
+    kind: "event",
+    sourceProvider: "eventbrite",
     name: "Toronto Jazz Festival",
     description: "Live jazz under the stars",
     url: "https://example.com/jazz",
