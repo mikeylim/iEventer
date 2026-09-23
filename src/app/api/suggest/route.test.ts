@@ -8,10 +8,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/ai/client", () => ({
   generateStructuredAi: mocks.generateStructuredAi,
-  friendlyAiError: (error: unknown, fallback: string) =>
-    error instanceof Error && /response contract failed/i.test(error.message)
-      ? "AI returned an invalid response. Try again."
-      : fallback,
 }));
 
 vi.mock("@/lib/session", () => ({
@@ -101,9 +97,27 @@ describe("POST /api/suggest", () => {
 
     const response = await POST(request({ prompt: "live music", count: 2 }));
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(502);
     expect(await response.json()).toEqual({
       error: "AI returned an invalid response. Try again.",
+      code: "AI_INVALID_RESPONSE",
+    });
+  });
+
+  it("reports depleted provider credits as service unavailability", async () => {
+    mocks.generateStructuredAi.mockRejectedValue(
+      Object.assign(
+        new Error("Your prepayment credits are depleted. RESOURCE_EXHAUSTED"),
+        { status: 402 }
+      )
+    );
+
+    const response = await POST(request({ prompt: "live music", count: 2 }));
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: "AI suggestions are temporarily unavailable. Try again later.",
+      code: "AI_BILLING_REQUIRED",
     });
   });
 });

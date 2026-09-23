@@ -7,7 +7,8 @@ import {
 	suggestionResponseSchema,
 	type SuggestionRequest,
 } from "@/lib/ai/contracts";
-import { friendlyAiError, generateStructuredAi } from "@/lib/ai/client";
+import { generateStructuredAi } from "@/lib/ai/client";
+import { getAiErrorDetails } from "@/lib/ai/errors";
 import {
 	readLimitedJsonBody,
 	RequestBodyTooLargeError,
@@ -88,9 +89,13 @@ Make searchKeyword a concise Eventbrite-style search query for real nearby event
 		if (error instanceof RequestBodyTooLargeError) {
 			return NextResponse.json({ error: error.message }, { status: 413 });
 		}
+		const aiError = getAiErrorDetails(
+			error,
+			"Failed to generate suggestions. Try again."
+		);
 		return NextResponse.json(
-			{ error: friendlyAiError(error, "Failed to generate suggestions. Try again.") },
-			{ status: 500 },
+			{ error: aiError.message, code: aiError.code },
+			{ status: aiError.httpStatus }
 		);
 	}
 }

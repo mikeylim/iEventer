@@ -6,6 +6,7 @@ import {
   parseStructuredAiResponse,
   toGeminiJsonSchema,
 } from "@/lib/ai/contracts";
+import { getAiErrorDetails } from "@/lib/ai/errors";
 
 export type AiFeature = "suggestions" | "routeOptimization" | "dailyPick";
 
@@ -102,34 +103,16 @@ export async function generateStructuredAi<T>({
     });
     return data;
   } catch (error) {
+    const errorDetails = getAiErrorDetails(error, "AI generation failed.");
     console.error("AI generation failed", {
       feature,
       model,
       promptVersion,
       durationMs: Date.now() - startedAt,
       errorType: error instanceof Error ? error.name : "UnknownError",
+      errorCode: errorDetails.code,
+      providerStatus: errorDetails.providerStatus,
     });
     throw error;
   }
-}
-
-export function friendlyAiError(error: unknown, fallback: string): string {
-  const message = error instanceof Error ? error.message : String(error);
-
-  if (/RESOURCE_EXHAUSTED|429|quota/i.test(message)) {
-    return "AI is busy right now (rate limit). Try again in a moment.";
-  }
-  if (/UNAUTHENTICATED|401|API key|GEMINI_API_KEY/i.test(message)) {
-    return "Gemini API key is invalid or missing.";
-  }
-  if (/PERMISSION_DENIED|403/i.test(message)) {
-    return "Gemini API key doesn't have access to this model.";
-  }
-  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|UND_ERR_SOCKET|timeout/i.test(message)) {
-    return "Couldn't reach Gemini. Try again in a moment.";
-  }
-  if (error instanceof z.ZodError || /response contract failed/i.test(message)) {
-    return "AI returned an invalid response. Try again.";
-  }
-  return fallback;
 }

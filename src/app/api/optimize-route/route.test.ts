@@ -8,7 +8,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/ai/client", () => ({
   generateStructuredAi: mocks.generateStructuredAi,
-  friendlyAiError: (_error: unknown, fallback: string) => fallback,
 }));
 
 vi.mock("@/lib/session", () => ({
